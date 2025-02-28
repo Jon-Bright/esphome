@@ -1,0 +1,5 @@
+substitutions:
+  dali_out_pin: GPIO12
+  dali_in_pin: GPIO14
+
+<<: !include common.yaml
