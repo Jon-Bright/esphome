@@ -18,8 +18,8 @@ namespace dali_bus {
 // Half-bits should be between 366.7us and 466.7us, typically 416.7us.
 // Double half-bits (when a zero follows a one or vice-versa) should be between 733.3us and 933.3us, typically 833.3us.
 
-// DaliState represents where in a bitstream we currently are
-enum DaliState : uint8_t {
+// DALIState represents where in a bitstream we currently are
+enum DALIState : uint8_t {
   stIdle,        // Nothing is happening on the bus
   stSending,     // We're sending on the bus (we should ignore anything we receive, it's us)
   stStartBitH1,  // We're receiving the first half of a start bit (DALI low)
@@ -29,8 +29,8 @@ enum DaliState : uint8_t {
   stFrameReady,  // We've seen a stop bit, so our data frame is ready
 };
 
-// DaliTime represents what the time between two edges on the input pin can validly represent
-enum DaliTime {
+// DALITime represents what the time between two edges on the input pin can validly represent
+enum DALITime {
   // The time between edges on the bus was:
   tiTooShort,   // too short to represent even half a bit
   tiHalfBit,    // valid for half a bit
@@ -47,7 +47,7 @@ struct DALIInterrupt {
 
   volatile uint32_t last_dali_high{0};
   volatile uint32_t last_dali_low{0};
-  volatile DaliState state{stIdle};
+  volatile DALIState state{stIdle};
 
   static void gpio_intr(DALIInterrupt *d);
   static void timer_intr(DALIInterrupt *d);
