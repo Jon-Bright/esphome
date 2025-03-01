@@ -16,7 +16,7 @@ CONFIG_SCHEMA = cv.All(
         {
             cv.GenerateID(): cv.declare_id(DALIBusComponent),
             cv.Required(CONF_DALI_OUT_PIN): pins.gpio_output_pin_schema,
-            cv.Required(CONF_DALI_IN_PIN): pins.gpio_input_pin_schema,
+            cv.Required(CONF_DALI_IN_PIN): pins.internal_gpio_input_pin_schema,
             cv.Optional(CONF_SCAN, default=True): cv.boolean,
         }
     ).extend(cv.COMPONENT_SCHEMA),

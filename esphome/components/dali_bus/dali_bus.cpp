@@ -1,4 +1,6 @@
 #include "esphome/core/gpio.h"
+#include "esphome/core/hal.h"
+#include "esphome/core/helpers.h"
 #include "esphome/core/log.h"
 
 #include "dali_bus.h"
@@ -8,7 +10,18 @@ namespace dali_bus {
 
 static const char *const TAG = "dali_bus";
 
-void DALIBusComponent::setup() {}
+void DALIBusComponent::setup() {
+  this->out_pin_->pin_mode(gpio::FLAG_OUTPUT);
+  this->out_pin_->setup();
+
+  this->in_pin_->pin_mode(gpio::FLAG_INPUT);
+  this->in_pin_->setup();
+  this->store_.in_pin = this->in_pin_->to_isr();
+
+  this->in_pin_->attach_interrupt(DALIInterrupt::gpio_intr, &this->store_, gpio::INTERRUPT_ANY_EDGE);
+}
+
+void IRAM_ATTR HOT DALIInterrupt::gpio_intr(DALIInterrupt *d) {}
 
 void DALIBusComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "dali_bus:");
