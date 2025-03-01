@@ -59,6 +59,8 @@ struct DALIInterrupt {
   void dali_idle();
   void start_stop_bit_timer(void);
   void stop_stop_bit_timer(void);
+
+  DALITime get_bit_time(void);
 };
 
 class DALIBusComponent : public Component {

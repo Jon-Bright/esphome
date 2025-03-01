@@ -37,6 +37,37 @@ void IRAM_ATTR HOT DALIInterrupt::timer_intr(DALIInterrupt *d) {
   d->dali_idle();
 }
 
+// The times below are ~63us more generous than the standard.  With electronics featuring a
+// relatively slow zener diode, these times have proven reliable. If other people have circuits
+// that respond differently, we could consider making this configurable.
+#define DALI_HB_MIN 303  // half-bit
+#define DALI_HB_MAX 530
+#define DALI_2HB_MIN 636  // 2 half-bits
+#define DALI_2HB_MAX 1030
+#define DALI_HB_NOM 416  // Nominal
+
+DALITime IRAM_ATTR DALIInterrupt::get_bit_time(void) {
+  unsigned long diff;
+  if (this->last_dali_high > this->last_dali_low) {
+    diff = this->last_dali_high - this->last_dali_low;
+  } else {
+    diff = this->last_dali_low - this->last_dali_high;
+  }
+  if (diff < DALI_HB_MIN) {
+    return tiTooShort;
+  }
+  if (diff < DALI_HB_MAX) {
+    return tiHalfBit;
+  }
+  if (diff < DALI_2HB_MIN) {
+    return tiInvalid;
+  }
+  if (diff < DALI_2HB_MAX) {
+    return ti2HalfBits;
+  }
+  return tiTooLong;
+}
+
 void IRAM_ATTR HOT DALIInterrupt::dali_high() {}
 
 void IRAM_ATTR HOT DALIInterrupt::dali_low() {}
