@@ -21,7 +21,20 @@ void DALIBusComponent::setup() {
   this->in_pin_->attach_interrupt(DALIInterrupt::gpio_intr, &this->store_, gpio::INTERRUPT_ANY_EDGE);
 }
 
-void IRAM_ATTR HOT DALIInterrupt::gpio_intr(DALIInterrupt *d) {}
+// DALI's "low" state is "the two bus wires are shorted together". This appears to us as the pin reading high.
+// Conversely, DALI's "high" state is "no short" and this appears as the pin reading low.
+// We receive an interrupt any time the level changes.
+void IRAM_ATTR HOT DALIInterrupt::gpio_intr(DALIInterrupt *d) {
+  if (d->in_pin.digital_read() == 0) {
+    d->dali_high();
+  } else {
+    d->dali_low();
+  }
+}
+
+void IRAM_ATTR HOT DALIInterrupt::dali_high() {}
+
+void IRAM_ATTR HOT DALIInterrupt::dali_low() {}
 
 void DALIBusComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "dali_bus:");
