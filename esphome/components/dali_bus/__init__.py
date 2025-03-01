@@ -1,7 +1,7 @@
 from esphome import pins
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.const import CONF_ID, CONF_SCAN
+from esphome.const import CONF_ID, CONF_SCAN, PLATFORM_ESP32, PLATFORM_ESP8266
 
 CODEOWNERS = ["@Jon-Bright"]
 
@@ -20,6 +20,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_SCAN, default=True): cv.boolean,
         }
     ).extend(cv.COMPONENT_SCHEMA),
+    cv.only_on([PLATFORM_ESP32, PLATFORM_ESP8266]),
 )
 
 
