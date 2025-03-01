@@ -3,6 +3,10 @@
 #include "esphome/core/component.h"
 #include "esphome/core/gpio.h"
 
+#ifdef USE_ESP32_FRAMEWORK_ARDUINO
+#include <esp32-hal-timer.h>
+#endif
+
 namespace esphome {
 namespace dali_bus {
 
@@ -37,14 +41,24 @@ enum DaliTime {
 
 struct DALIInterrupt {
   ISRInternalGPIOPin in_pin;
+#ifdef USE_ESP32_FRAMEWORK_ARDUINO
+  hw_timer_t *timer;
+#endif
 
   volatile uint32_t last_dali_high{0};
   volatile uint32_t last_dali_low{0};
   volatile DaliState state{stIdle};
 
   static void gpio_intr(DALIInterrupt *d);
+  static void timer_intr(DALIInterrupt *d);
+#ifdef USE_ESP_IDF
+  static bool timer_intr_bool(void *d);
+#endif
   void dali_high();
   void dali_low();
+  void dali_idle();
+  void start_stop_bit_timer(void);
+  void stop_stop_bit_timer(void);
 };
 
 class DALIBusComponent : public Component {
@@ -63,6 +77,7 @@ class DALIBusComponent : public Component {
   bool scan_;
 
  private:
+  void setup_timer();
   DALIInterrupt store_;
 };
 

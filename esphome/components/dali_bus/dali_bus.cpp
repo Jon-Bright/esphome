@@ -32,9 +32,16 @@ void IRAM_ATTR HOT DALIInterrupt::gpio_intr(DALIInterrupt *d) {
   }
 }
 
+void IRAM_ATTR HOT DALIInterrupt::timer_intr(DALIInterrupt *d) {
+  // When the timer interval triggers, we've finished receiving bits - a stop bit has been seen
+  d->dali_idle();
+}
+
 void IRAM_ATTR HOT DALIInterrupt::dali_high() {}
 
 void IRAM_ATTR HOT DALIInterrupt::dali_low() {}
+
+void IRAM_ATTR HOT DALIInterrupt::dali_idle() {}
 
 void DALIBusComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "dali_bus:");
