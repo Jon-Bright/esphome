@@ -11,6 +11,9 @@
 // "divide by 256" is the best we can do on ESP8266 and that's this.)
 #define STOP_BIT_TICKS 750
 
+// 3.2*130 = 416us, exactly the nominal half-bit time.
+#define HALF_BIT_TICKS 130
+
 namespace esphome {
 namespace dali_bus {
 
@@ -24,6 +27,11 @@ void DALIBusComponent::setup_timer() {
 void DALIInterrupt::start_stop_bit_timer(void) {
   timer1_enable(TIM_DIV256, TIM_EDGE, TIM_SINGLE);
   timer1_write(STOP_BIT_TICKS);
+}
+
+void DALIInterrupt::start_half_bit_timer(void) {
+  timer1_enable(TIM_DIV256, TIM_EDGE, TIM_SINGLE);
+  timer1_write(HALF_BIT_TICKS);
 }
 
 void DALIInterrupt::stop_stop_bit_timer(void) { timer1_disable(); }
@@ -42,6 +50,12 @@ void DALIBusComponent::setup_timer() {
 
 void DALIInterrupt::start_stop_bit_timer(void) {
   timerAlarmWrite(this->timer, STOP_BIT_TICKS, false);
+  timerRestart(this->timer);
+  timerStart(this->timer);
+}
+
+void DALIInterrupt::start_half_bit_timer(void) {
+  timerAlarmWrite(this->timer, HALF_BIT_TICKS, false);
   timerRestart(this->timer);
   timerStart(this->timer);
 }
@@ -66,6 +80,12 @@ void DALIBusComponent::setup_timer() {
 
 void DALIInterrupt::start_stop_bit_timer(void) {
   timer_set_alarm_value(TIMER_GROUP_0, TIMER_0, STOP_BIT_TICKS);
+  timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0);
+  timer_start(TIMER_GROUP_0, TIMER_0);
+}
+
+void DALIInterrupt::start_half_bit_timer(void) {
+  timer_set_alarm_value(TIMER_GROUP_0, TIMER_0, HALF_BIT_TICKS);
   timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0);
   timer_start(TIMER_GROUP_0, TIMER_0);
 }
