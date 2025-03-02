@@ -34,7 +34,7 @@ void IRAM_ATTR HOT DALIInterrupt::gpio_intr(DALIInterrupt *d) {
 }
 
 void IRAM_ATTR HOT DALIInterrupt::timer_intr(DALIInterrupt *d) {
-  if (d->state == stSending) {
+  if (d->recv_state == rsSending) {
     // We're sending. The timer for the prior half-bit expired, we should send the next half-bit (if any).
     d->send_next_half_bit();
   } else {
@@ -84,41 +84,41 @@ void IRAM_ATTR HOT DALIInterrupt::received_bit(bool bit) {
 
 void IRAM_ATTR HOT DALIInterrupt::dali_high() {
   this->last_dali_high = micros();
-  if (this->state == stSending) {
+  if (this->recv_state == rsSending) {
     // We're sending - so hopefully, we're receiving what we're sending and can ignore it
     return;
   }
   DALITime bitTime = get_bit_time();
-  if (this->state == stStartBitH1) {
+  if (this->recv_state == rsStartBitH1) {
     // We were in the first half of the start bit, we expect a half-bit timing.
     if (bitTime == tiHalfBit) {
-      this->state = stStartBitH2;
+      this->recv_state = rsStartBitH2;
     } else {
       // Incorrect bit timing
       ESP_LOGD(TAG, "Wrong start 1H bit time: %d", bitTime);
-      this->state = stIdle;
+      this->recv_state = rsIdle;
     }
-  } else if (this->state == stFirstHalf) {
+  } else if (this->recv_state == rsFirstHalf) {
     // We were in the first half of a normal bit, which implies that the previous state
     // was an edge change to DALI low at the start of a one bit. We should expect timing
     // for a half-bit.
     if (bitTime == tiHalfBit) {
       // Yep, this was the first half of a one. Now second half. Stop bit might follow.
-      this->state = stSecondHalf;
+      this->recv_state = rsSecondHalf;
       this->start_stop_bit_timer();
     } else {
       // Incorrect bit timing
       ESP_LOGD(TAG, "Wrong data 1H 1-bit time: %d", bitTime);
-      this->state = stIdle;
+      this->recv_state = rsIdle;
     }
-  } else if (this->state == stSecondHalf) {
+  } else if (this->recv_state == rsSecondHalf) {
     // We were in the second half of a normal bit. This implies the last edge was a change to
     // DALI low in the middle of a zero. This is _either_ the start of a zero after a half-bit
     // of delay, _or_ it's the midpoint of a one after two half-bits of delay.
     if (bitTime == tiHalfBit) {
       // OK, it was the second half of a zero. We're back in first half of a zero, or a stop bit.
       this->received_bit(false);
-      this->state = stFirstHalf;
+      this->recv_state = rsFirstHalf;
       this->start_stop_bit_timer();
     } else if (bitTime == ti2HalfBits) {
       // It was the second half of a zero and the first half of a one.  Remain in second half.
@@ -128,14 +128,14 @@ void IRAM_ATTR HOT DALIInterrupt::dali_high() {
     } else {
       // Incorrect bit timing
       ESP_LOGD(TAG, "Wrong data 2H zero bit time: %d", bitTime);
-      this->state = stIdle;
+      this->recv_state = rsIdle;
     }
   }
 }
 
 void IRAM_ATTR HOT DALIInterrupt::dali_low() {
   this->last_dali_low = micros();
-  if (this->state == stSending) {
+  if (this->recv_state == rsSending) {
     // We're sending - so hopefully, we're receiving what we're sending and can ignore it
     return;
   }
@@ -143,73 +143,73 @@ void IRAM_ATTR HOT DALIInterrupt::dali_low() {
   this->stop_stop_bit_timer();
 
   DALITime bitTime = get_bit_time();
-  if (this->state == stIdle) {
+  if (this->recv_state == rsIdle) {
     // We were idle, so this is the start of a start bit
-    this->state = stStartBitH1;
+    this->recv_state = rsStartBitH1;
     this->rcvd_bits = 0;
     this->rcvd_val = 0;
-  } else if (this->state == stStartBitH2) {
+  } else if (this->recv_state == rsStartBitH2) {
     // We were in the second half of a start bit, so this is _either_ the start of a one after
     // a half-bit of delay, or the second half of a zero after two half-bits of delay.
     if (bitTime == tiHalfBit) {
       // It's a one, first half starts now
-      this->state = stFirstHalf;
+      this->recv_state = rsFirstHalf;
     } else if (bitTime == ti2HalfBits) {
       // It's a zero, second half starts now
-      this->state = stSecondHalf;
+      this->recv_state = rsSecondHalf;
     } else {
       // Incorrect bit timing
       ESP_LOGD(TAG, "Wrong start 2H bit time: %d", bitTime);
-      this->state = stIdle;
+      this->recv_state = rsIdle;
     }
-  } else if (this->state == stFirstHalf) {
+  } else if (this->recv_state == rsFirstHalf) {
     // We were in the first half of a normal bit, which implies that the previous state
     // was an edge change to DALI high at the start of a zero bit. We should expect timing
     // for a half-bit.
     if (bitTime == tiHalfBit) {
       // Yep, this was the first half of a zero. Now second half. (Stop bit can't follow without
       // an adge change back to high.)
-      this->state = stSecondHalf;
+      this->recv_state = rsSecondHalf;
     } else {
       // Incorrect bit timing
       ESP_LOGD(TAG, "Wrong data 1H 0-bit time: %d", bitTime);
-      this->state = stIdle;
+      this->recv_state = rsIdle;
     }
-  } else if (this->state == stSecondHalf) {
+  } else if (this->recv_state == rsSecondHalf) {
     // We were in the second half of a normal bit. This implies the last edge was a change to
     // DALI high in the middle of a one. This is _either_ the start of a one after a half-bit
     // of delay, _or_ it's the midpoint of a zero after two half-bits of delay.
     if (bitTime == tiHalfBit) {
       // OK, it was the second half of a one. We're back in first half of a one.
       this->received_bit(true);
-      this->state = stFirstHalf;
+      this->recv_state = rsFirstHalf;
     } else if (bitTime == ti2HalfBits) {
       // It was the second half of a one and the first half of a zero.  Remain in second half.
       this->received_bit(true);
     } else {
       // Incorrect bit timing
       ESP_LOGD(TAG, "Wrong data 2H one bit time: %d", bitTime);
-      this->state = stIdle;
+      this->recv_state = rsIdle;
     }
   }
 }
 
 void IRAM_ATTR HOT DALIInterrupt::dali_idle() {
-  if (this->state == stSecondHalf) {
+  if (this->recv_state == rsSecondHalf) {
     // We were in the second half of a normal bit. This implies the last edge was a change to
     // DALI high in the middle of a one. Add that last bit and we're ready.
     this->received_bit(true);
-    this->state = stFrameReady;
+    this->recv_state = rsFrameReady;
     ESP_LOGD(TAG, "Frame ready, %d bits", this->rcvd_bits);
-  } else if (this->state == stFirstHalf) {
+  } else if (this->recv_state == rsFirstHalf) {
     // We saw the line go high after a zero and assumed the first half of another zero, but
     // it turned out to be a stop bit.
-    this->state = stFrameReady;
+    this->recv_state = rsFrameReady;
     ESP_LOGD(TAG, "Frame ready, %d bits", this->rcvd_bits);
   } else {
     // Incorrect bit timing
-    ESP_LOGD(TAG, "Unexpected stop in state %d", this->state);
-    this->state = stIdle;
+    ESP_LOGD(TAG, "Unexpected stop in state %d", this->recv_state);
+    this->recv_state = rsIdle;
   }
 }
 
@@ -225,7 +225,7 @@ void IRAM_ATTR HOT DALIInterrupt::send_next_half_bit() {
   if (this->low_time_at_start_of_high != 0 && this->last_dali_low != this->low_time_at_start_of_high) {
     // Yep, we've collided
     this->send_state = ssFailed;
-    this->state = stStartBitH1;
+    this->recv_state = rsStartBitH1;
     return;
   }
 
@@ -260,7 +260,7 @@ void IRAM_ATTR HOT DALIInterrupt::send_next_half_bit() {
   } else if (this->send_state == ssStopBit) {
     // We've successfully waited out the stop bit, our work here is done.
     this->send_state = ssSuccess;
-    this->state = stIdle;
+    this->recv_state = rsIdle;
   }
 }
 
