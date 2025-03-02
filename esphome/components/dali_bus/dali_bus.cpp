@@ -72,15 +72,15 @@ void IRAM_ATTR HOT DALIInterrupt::timer_intr(DALIInterrupt *d) {
 
 // The times below are ~63us more generous than the standard.  With electronics featuring a
 // relatively slow zener diode, these times have proven reliable. If other people have circuits
-// that respond differently, we could consider making this configurable.
-#define DALI_HB_MIN 303  // half-bit
-#define DALI_HB_MAX 530
-#define DALI_2HB_MIN 636  // 2 half-bits
-#define DALI_2HB_MAX 1030
-#define DALI_HB_NOM 416  // Nominal
+// that respond differently, we could consider making this configurable. HB_NOM matches the standard.
+static const uint32_t DALI_HB_MIN = 303;  // half-bit
+static const uint32_t DALI_HB_MAX = 530;
+static const uint32_t DALI_2HB_MIN = 636;  // 2 half-bits
+static const uint32_t DALI_2HB_MAX = 1030;
+static const uint32_t DALI_HB_NOM = 416;  // Nominal
 
 DALITime IRAM_ATTR DALIInterrupt::get_bit_time(void) {
-  unsigned long diff;
+  uint32_t diff;
   if (this->last_dali_high > this->last_dali_low) {
     diff = this->last_dali_high - this->last_dali_low;
   } else {
@@ -240,8 +240,9 @@ void IRAM_ATTR HOT DALIInterrupt::dali_idle() {
   }
 }
 
-#define DALI_HIGH() this->out_pin.digital_write(false)
-#define DALI_LOW() this->out_pin.digital_write(true)
+inline void IRAM_ATTR HOT DALIInterrupt::set_dali_high() { this->out_pin.digital_write(false); }
+
+inline void IRAM_ATTR HOT DALIInterrupt::set_dali_low() { this->out_pin.digital_write(true); }
 
 void IRAM_ATTR HOT DALIInterrupt::send_next_half_bit() {
   // First, check if we collided with another sender on the bus. We can't see collisions if we'd
@@ -259,7 +260,7 @@ void IRAM_ATTR HOT DALIInterrupt::send_next_half_bit() {
   // OK, no collision, time for the next half-bit
   if (this->send_state == ssStartBit) {
     // We've just sent the first half of our start bit. Switch to DALI high, move on to data bits.
-    DALI_HIGH();
+    set_dali_high();
     this->low_time_at_start_of_high = micros();
     this->send_state = ssDataBits;
     this->start_half_bit_timer();
@@ -267,17 +268,17 @@ void IRAM_ATTR HOT DALIInterrupt::send_next_half_bit() {
     // We should send the next half bit
     if (this->send_half_bits == 0) {
       // ...but there's nothing more to send! Send a stop bit.
-      DALI_HIGH();
+      set_dali_high();
       this->low_time_at_start_of_high = micros();
       this->send_state = ssStopBit;
       this->start_stop_bit_timer();
     } else {
       // ...and there's more to send.
       if ((this->send_val & 1) == 1) {
-        DALI_HIGH();
+        set_dali_high();
         this->low_time_at_start_of_high = micros();
       } else {
-        DALI_LOW();
+        set_dali_low();
         this->low_time_at_start_of_high = 0;
       }
       this->send_val = this->send_val >> 1;

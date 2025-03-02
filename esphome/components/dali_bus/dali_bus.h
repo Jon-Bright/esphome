@@ -172,6 +172,8 @@ struct DALIInterrupt {
   void dali_high();
   void dali_low();
   void dali_idle();
+  inline void set_dali_high() __attribute__((always_inline));
+  inline void set_dali_low() __attribute__((always_inline));
   void send_next_half_bit();
   void start_stop_bit_timer(void);
   void start_half_bit_timer(void);
@@ -191,12 +193,10 @@ class DALIBusComponent : public Component {
   void set_dali_in_pin(InternalGPIOPin *in_pin) { in_pin_ = in_pin; }
 
  protected:
+  void setup_timer_();
   InternalGPIOPin *out_pin_;
   InternalGPIOPin *in_pin_;
   bool scan_;
-
- private:
-  void setup_timer();
   DALIInterrupt store_;
 };
 
