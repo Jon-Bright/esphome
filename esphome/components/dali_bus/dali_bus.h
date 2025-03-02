@@ -57,7 +57,7 @@ struct DALIInterrupt {
 #ifdef USE_ESP_IDF
   static bool timer_intr_bool(void *d);
 #endif
-  void add_bit(bool bit);
+  void received_bit(bool bit);
   void dali_high();
   void dali_low();
   void dali_idle();

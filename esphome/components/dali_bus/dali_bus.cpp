@@ -68,7 +68,7 @@ DALITime IRAM_ATTR DALIInterrupt::get_bit_time(void) {
   return tiTooLong;
 }
 
-void IRAM_ATTR HOT DALIInterrupt::add_bit(bool bit) {
+void IRAM_ATTR HOT DALIInterrupt::received_bit(bool bit) {
   this->rcvd_bits++;
   this->rcvd_val <<= 1;
   if (bit) {
@@ -111,13 +111,13 @@ void IRAM_ATTR HOT DALIInterrupt::dali_high() {
     // of delay, _or_ it's the midpoint of a one after two half-bits of delay.
     if (bitTime == tiHalfBit) {
       // OK, it was the second half of a zero. We're back in first half of a zero, or a stop bit.
-      this->add_bit(false);
+      this->received_bit(false);
       this->state = stFirstHalf;
       this->start_stop_bit_timer();
     } else if (bitTime == ti2HalfBits) {
       // It was the second half of a zero and the first half of a one.  Remain in second half.
       // It might nevertheless be a stop bit.
-      this->add_bit(false);
+      this->received_bit(false);
       this->start_stop_bit_timer();
     } else {
       // Incorrect bit timing
@@ -175,11 +175,11 @@ void IRAM_ATTR HOT DALIInterrupt::dali_low() {
     // of delay, _or_ it's the midpoint of a zero after two half-bits of delay.
     if (bitTime == tiHalfBit) {
       // OK, it was the second half of a one. We're back in first half of a one.
-      this->add_bit(true);
+      this->received_bit(true);
       this->state = stFirstHalf;
     } else if (bitTime == ti2HalfBits) {
       // It was the second half of a one and the first half of a zero.  Remain in second half.
-      this->add_bit(true);
+      this->received_bit(true);
     } else {
       // Incorrect bit timing
       ESP_LOGD(TAG, "Wrong data 2H one bit time: %d", bitTime);
@@ -192,7 +192,7 @@ void IRAM_ATTR HOT DALIInterrupt::dali_idle() {
   if (this->state == stSecondHalf) {
     // We were in the second half of a normal bit. This implies the last edge was a change to
     // DALI high in the middle of a one. Add that last bit and we're ready.
-    this->add_bit(true);
+    this->received_bit(true);
     this->state = stFrameReady;
     ESP_LOGD(TAG, "Frame ready, %d bits", this->rcvd_bits);
   } else if (this->state == stFirstHalf) {
