@@ -48,6 +48,102 @@ enum DALISendState : uint8_t {
   ssFailed,
 };
 
+// DALIAddr represents the address of a device. There are a number of "special" addresses,
+// see the more complete description of those in the code.
+typedef uint8_t DALIAddr;
+
+// DALIPri represents the priority of a given message. This affects how long the bus needs to be idle
+// before said message is sent (thereby also providing crude time-domain mediation of the bus).
+enum DALIPri : uint8_t {
+  priTxn = 1,  // "used for all forward frames within a transaction [...] except for the first"
+  priUser,     // "used to execute user instigated actions"
+  priConfig,   // "used for configuration of a bus unit" (also events that aren't User or Auto)
+  priAuto,     // "used to execute automatic actions"
+  priQuery,    // "used for periodic query commands"
+};
+
+// DALIMsg represents all available DALI messages.
+enum DALIMsg : uint8_t {
+  msgOff = 0x00,
+  msgUp,
+  msgDown,
+  msgStepUp,
+  msgStepDown,
+  msgRecallMax,
+  msgRecallMin,
+  msgStepDownOff,
+  msgOnStepUp,
+  msgEnableDapcSeq,
+  msgGoToLastActiveLevel,  // v2
+
+  msgGoToScene = 0x10,  // ...and up to 0x1f, for different scenes.
+
+  msgReset = 0x20,
+  msgStoreActualLevelDtr0,
+  msgSavePersistentVars,  // v2
+  msgSetOperatingMode,    // v2
+  msgResetMemoryBank,     // v2
+  msgIdentifyDevice,      // v2
+
+  msgSetMaxLevel = 0x2a,
+  msgSetMinLevel,
+  msgSetSystemFailureLevel,
+  msgSetPowerOnLevel,
+  msgSetFadeTime,
+  msgSetFadeRate,
+  msgSetExtendedFadeTime,  // v2
+
+  msgSetScene = 0x40,  // ...and up to 0x4f, for different scenes.
+
+  msgRemoveFromScene = 0x50,  // ...and up to 0x5f, for different scenes.
+
+  msgAddToGroup = 0x60,  // ...and up to 0x6f, for different groups.
+
+  msgRemoveFromGroup = 0x70,  // ...and up to 0x7f, for different groups.
+
+  msgSetShortAddr = 0x80,
+  msgEnableWriteMemory,
+
+  msgQueryStatus = 0x90,
+  msgQueryControlGearPresent,
+  msgQueryLampFailure,
+  msgQueryLampPowerOn,
+  msgQueryLimitError,
+  msgQueryResetState,
+  msgQueryMissingShortAddr,
+  msgQueryVersionNo,
+  msgQueryContentDtr0,
+  msgQueryDeviceType,
+  msgQueryPhysicalMin,
+  msgQueryPowerFailure,
+  msgQueryContentDtr1,
+  msgQueryContentDtr2,
+  msgQueryOperatingMode,    // v2
+  msgQueryLightSourceType,  // v2
+
+  msgQueryActualLevel,
+  msgQueryMaxLevel,
+  msgQueryMinLevel,
+  msgQueryPowerOnLevel,
+  msgQuerySystemFailureLevel,
+  msgQueryFadeTimeRate,
+  msgQueryMfrSpecificMode,            // v2
+  msgQueryNextDeviceType,             // v2
+  msgQueryExtendedFadeTime,           // v2
+  msgQueryControlGearFailure = 0xaa,  // v2
+
+  msgQuerySceneLevel = 0xb0,  // ...and up to 0xbf, for different scenes.
+
+  msgQueryGroup0_7 = 0xc0,
+  msgQueryGroup8_15,
+  msgQueryRandomAddrH,
+  msgQueryRandomAddrM,
+  msgQueryRandomAddrL,
+  msgReadMemoryLoc,
+
+  msgAppExtCmdBase = 0xe0,
+};
+
 struct DALIInterrupt {
   ISRInternalGPIOPin in_pin;
   ISRInternalGPIOPin out_pin;

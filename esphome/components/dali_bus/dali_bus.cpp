@@ -10,6 +10,32 @@ namespace dali_bus {
 
 static const char *const TAG = "dali_bus";
 
+// These are all "special" addresses. They're outside the range of normal short addresses
+// and are (largely) used for sending commands with data.  Essentially, for those commands,
+// the address is the opcode and the opcode byte is used for data.
+const DALIAddr ADDR_BROADCAST = (DALIAddr) 0xFF;
+
+const DALIAddr ADDR_TERMINATE = (DALIAddr) 0xa1;
+const DALIAddr ADDR_DTR0 = (DALIAddr) 0xa3;
+const DALIAddr ADDR_INITIALISE = (DALIAddr) 0xa5;
+const DALIAddr ADDR_RANDOMISE = (DALIAddr) 0xa7;
+const DALIAddr ADDR_COMPARE = (DALIAddr) 0xa9;
+const DALIAddr ADDR_WITHDRAW = (DALIAddr) 0xab;
+const DALIAddr ADDR_PING = (DALIAddr) 0xad;
+
+const DALIAddr ADDR_SEARCH_ADDR_H = (DALIAddr) 0xb1;
+const DALIAddr ADDR_SEARCH_ADDR_M = (DALIAddr) 0xb3;
+const DALIAddr ADDR_SEARCH_ADDR_L = (DALIAddr) 0xb5;
+const DALIAddr ADDR_PROGRAM_SHORT_ADDR = (DALIAddr) 0xb7;
+const DALIAddr ADDR_VERIFY_SHORT_ADDR = (DALIAddr) 0xb9;
+const DALIAddr ADDR_QUERY_SHORT_ADDR = (DALIAddr) 0xbb;
+
+const DALIAddr ADDR_ENABLE_DEVICE_TYPE = (DALIAddr) 0xc1;
+const DALIAddr ADDR_DTR1 = (DALIAddr) 0xc3;
+const DALIAddr ADDR_DTR2 = (DALIAddr) 0xc5;
+const DALIAddr ADDR_WRITE_MEM_LOC = (DALIAddr) 0xc7;
+const DALIAddr ADDR_WRITE_MEM_LOC_NO_REPLY = (DALIAddr) 0xc7;
+
 void DALIBusComponent::setup() {
   this->out_pin_->pin_mode(gpio::FLAG_OUTPUT);
   this->out_pin_->setup();
