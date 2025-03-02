@@ -14,6 +14,7 @@ void DALIBusComponent::setup() {
   this->out_pin_->pin_mode(gpio::FLAG_OUTPUT);
   this->out_pin_->setup();
   this->store_.out_pin = this->out_pin_->to_isr();
+  this->out_pin_->digital_write(false);  // DALI high, i.e. not shorted/idle
 
   this->in_pin_->pin_mode(gpio::FLAG_INPUT);
   this->in_pin_->setup();
