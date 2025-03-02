@@ -34,8 +34,13 @@ void IRAM_ATTR HOT DALIInterrupt::gpio_intr(DALIInterrupt *d) {
 }
 
 void IRAM_ATTR HOT DALIInterrupt::timer_intr(DALIInterrupt *d) {
-  // When the timer interval triggers, we've finished receiving bits - a stop bit has been seen
-  d->dali_idle();
+  if (d->state == stSending) {
+    // We're sending. The timer for the prior half-bit expired, we should send the next half-bit (if any).
+    d->send_next_half_bit();
+  } else {
+    // When the timer interval triggers, we've finished receiving bits - a stop bit has been seen
+    d->dali_idle();
+  }
 }
 
 // The times below are ~63us more generous than the standard.  With electronics featuring a
@@ -204,6 +209,57 @@ void IRAM_ATTR HOT DALIInterrupt::dali_idle() {
   } else {
     // Incorrect bit timing
     ESP_LOGD(TAG, "Unexpected stop in state %d", this->state);
+    this->state = stIdle;
+  }
+}
+
+#define DALI_HIGH() this->out_pin.digital_write(false)
+#define DALI_LOW() this->out_pin.digital_write(true)
+
+void IRAM_ATTR HOT DALIInterrupt::send_next_half_bit() {
+  // First, check if we collided with another sender on the bus. We can't see collisions if we'd
+  // shorted the bus (DALI low), but if we were just sending a DALI high half-bit, then the last low
+  // time should be what it was when we started that half-bit. If it isn't, someone else has shorted
+  // the bus. If they've done that, then (a) we should stop sending and (b) that's presumably the
+  // low at the start of their start bit and we should set the state accordingly.
+  if (this->low_time_at_start_of_high != 0 && this->last_dali_low != this->low_time_at_start_of_high) {
+    // Yep, we've collided
+    this->send_state = ssFailed;
+    this->state = stStartBitH1;
+    return;
+  }
+
+  // OK, no collision, time for the next half-bit
+  if (this->send_state == ssStartBit) {
+    // We've just sent the first half of our start bit. Switch to DALI high, move on to data bits.
+    DALI_HIGH();
+    this->low_time_at_start_of_high = micros();
+    this->send_state = ssDataBits;
+    this->start_half_bit_timer();
+  } else if (this->send_state == ssDataBits) {
+    // We should send the next half bit
+    if (this->send_half_bits == 0) {
+      // ...but there's nothing more to send! Send a stop bit.
+      DALI_HIGH();
+      this->low_time_at_start_of_high = micros();
+      this->send_state = ssStopBit;
+      this->start_stop_bit_timer();
+    } else {
+      // ...and there's more to send.
+      if ((this->send_val & 1) == 1) {
+        DALI_HIGH();
+        this->low_time_at_start_of_high = micros();
+      } else {
+        DALI_LOW();
+        this->low_time_at_start_of_high = 0;
+      }
+      this->send_val = this->send_val >> 1;
+      this->send_half_bits = this->send_half_bits - 1;
+      this->start_half_bit_timer();
+    }
+  } else if (this->send_state == ssStopBit) {
+    // We've successfully waited out the stop bit, our work here is done.
+    this->send_state = ssSuccess;
     this->state = stIdle;
   }
 }

@@ -39,6 +39,15 @@ enum DALITime {
   tiTooLong,    // too long to represent even two half-bits
 };
 
+// DALISendState is the state of an ongoing send
+enum DALISendState : uint8_t {
+  ssStartBit,
+  ssDataBits,
+  ssStopBit,
+  ssSuccess,
+  ssFailed,
+};
+
 struct DALIInterrupt {
   ISRInternalGPIOPin in_pin;
   ISRInternalGPIOPin out_pin;
@@ -53,6 +62,11 @@ struct DALIInterrupt {
   volatile uint8_t rcvd_bits{0};
   volatile uint32_t rcvd_val{0};
 
+  volatile uint8_t send_half_bits{0};
+  volatile uint32_t send_val{0};
+  volatile uint32_t low_time_at_start_of_high{0};
+  volatile DALISendState send_state{ssSuccess};
+
   static void gpio_intr(DALIInterrupt *d);
   static void timer_intr(DALIInterrupt *d);
 #ifdef USE_ESP_IDF
@@ -62,6 +76,7 @@ struct DALIInterrupt {
   void dali_high();
   void dali_low();
   void dali_idle();
+  void send_next_half_bit();
   void start_stop_bit_timer(void);
   void start_half_bit_timer(void);
   void stop_stop_bit_timer(void);
