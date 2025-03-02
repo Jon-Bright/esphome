@@ -8,7 +8,7 @@
 // For all variants of the timer, we have a frequency of 312500Hz, meaning
 // each tick takes 3.2us. 750 ticks is therefore 2400us, or the correct
 // minimum stop bit time. (We could in theory use a lower frequency, but
-// "divide by 256" is the best we can do on ESP8266 and that's this.
+// "divide by 256" is the best we can do on ESP8266 and that's this.)
 #define STOP_BIT_TICKS 750
 
 namespace esphome {
