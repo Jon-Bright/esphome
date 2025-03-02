@@ -69,10 +69,10 @@ DALITime IRAM_ATTR DALIInterrupt::get_bit_time(void) {
 }
 
 void IRAM_ATTR HOT DALIInterrupt::received_bit(bool bit) {
-  this->rcvd_bits++;
-  this->rcvd_val <<= 1;
+  this->rcvd_bits = this->rcvd_bits + 1;
+  this->rcvd_val = this->rcvd_val << 1;
   if (bit) {
-    this->rcvd_val |= 1;
+    this->rcvd_val = this->rcvd_val | 1;
   }
 }
 
