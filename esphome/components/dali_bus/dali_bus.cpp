@@ -188,7 +188,24 @@ void IRAM_ATTR HOT DALIInterrupt::dali_low() {
   }
 }
 
-void IRAM_ATTR HOT DALIInterrupt::dali_idle() {}
+void IRAM_ATTR HOT DALIInterrupt::dali_idle() {
+  if (this->state == stSecondHalf) {
+    // We were in the second half of a normal bit. This implies the last edge was a change to
+    // DALI high in the middle of a one. Add that last bit and we're ready.
+    this->add_bit(true);
+    this->state = stFrameReady;
+    ESP_LOGD(TAG, "Frame ready, %d bits", this->rcvdBits);
+  } else if (this->state == stFirstHalf) {
+    // We saw the line go high after a zero and assumed the first half of another zero, but
+    // it turned out to be a stop bit.
+    this->state = stFrameReady;
+    ESP_LOGD(TAG, "Frame ready, %d bits", this->rcvdBits);
+  } else {
+    // Incorrect bit timing
+    ESP_LOGD(TAG, "Unexpected stop in state %d", this->state);
+    this->state = stIdle;
+  }
+}
 
 void DALIBusComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "dali_bus:");
