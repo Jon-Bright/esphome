@@ -41,6 +41,7 @@ enum DALITime {
 
 struct DALIInterrupt {
   ISRInternalGPIOPin in_pin;
+  ISRInternalGPIOPin out_pin;
 #ifdef USE_ESP32_FRAMEWORK_ARDUINO
   hw_timer_t *timer;
 #endif
@@ -74,11 +75,11 @@ class DALIBusComponent : public Component {
   float get_setup_priority() const override { return setup_priority::BUS; }
 
   void set_scan(bool scan) { scan_ = scan; }
-  void set_dali_out_pin(GPIOPin *out_pin) { out_pin_ = out_pin; }
+  void set_dali_out_pin(InternalGPIOPin *out_pin) { out_pin_ = out_pin; }
   void set_dali_in_pin(InternalGPIOPin *in_pin) { in_pin_ = in_pin; }
 
  protected:
-  GPIOPin *out_pin_;
+  InternalGPIOPin *out_pin_;
   InternalGPIOPin *in_pin_;
   bool scan_;
 

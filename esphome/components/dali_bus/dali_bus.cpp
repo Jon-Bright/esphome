@@ -13,6 +13,7 @@ static const char *const TAG = "dali_bus";
 void DALIBusComponent::setup() {
   this->out_pin_->pin_mode(gpio::FLAG_OUTPUT);
   this->out_pin_->setup();
+  this->store_.out_pin = this->out_pin_->to_isr();
 
   this->in_pin_->pin_mode(gpio::FLAG_INPUT);
   this->in_pin_->setup();
