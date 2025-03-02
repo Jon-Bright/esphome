@@ -194,6 +194,8 @@ class DALIBusComponent : public Component {
 
  protected:
   void setup_timer_();
+  void send_forward_message_(DALIAddr addr, DALIMsg msg);
+
   InternalGPIOPin *out_pin_;
   InternalGPIOPin *in_pin_;
   bool scan_;

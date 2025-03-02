@@ -292,6 +292,47 @@ void IRAM_ATTR HOT DALIInterrupt::send_next_half_bit() {
   }
 }
 
+void DALIBusComponent::send_forward_message_(DALIAddr addr, DALIMsg msg) {
+  // We don't check the state before setting stSending. Whatever was happening before,
+  // we should have waited for our priority (a bunch of ms) and nothing happened in that time.
+  // We're OK to just overwrite a previous state. (This will also allow us to recover a few
+  // odd states.)
+  uint32_t to_send = 0;
+  uint32_t set_bit = 1;
+  uint8_t check_bit = 0x80;
+  while (check_bit != 0) {
+    if ((addr & check_bit) == 0) {
+      to_send |= set_bit;
+      set_bit <<= 2;
+    } else {
+      set_bit <<= 1;
+      to_send |= set_bit;
+      set_bit <<= 1;
+    }
+    check_bit >>= 1;
+  }
+  check_bit = 0x80;
+  while (check_bit != 0) {
+    if ((msg & check_bit) == 0) {
+      to_send |= set_bit;
+      set_bit <<= 2;
+    } else {
+      set_bit <<= 1;
+      to_send |= set_bit;
+      set_bit <<= 1;
+    }
+    check_bit >>= 1;
+  }
+  this->store_.send_val = to_send;
+  this->store_.send_half_bits = 32;
+  this->store_.recv_state = rsSending;
+  this->store_.send_state = ssStartBit;
+
+  // Start the start bit
+  this->store_.set_dali_low();
+  this->store_.start_half_bit_timer();
+}
+
 void DALIBusComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "dali_bus:");
   LOG_PIN("  DALI out: ", this->out_pin_);
