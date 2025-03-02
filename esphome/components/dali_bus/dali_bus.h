@@ -49,8 +49,8 @@ struct DALIInterrupt {
   volatile uint32_t last_dali_low{0};
   volatile DALIState state{stIdle};
 
-  uint8_t rcvdBits;
-  uint32_t rcvdVal;
+  uint8_t rcvd_bits{0};
+  uint32_t rcvd_val{0};
 
   static void gpio_intr(DALIInterrupt *d);
   static void timer_intr(DALIInterrupt *d);

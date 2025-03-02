@@ -69,10 +69,10 @@ DALITime IRAM_ATTR DALIInterrupt::get_bit_time(void) {
 }
 
 void IRAM_ATTR HOT DALIInterrupt::add_bit(bool bit) {
-  this->rcvdBits++;
-  this->rcvdVal <<= 1;
+  this->rcvd_bits++;
+  this->rcvd_val <<= 1;
   if (bit) {
-    this->rcvdVal |= 1;
+    this->rcvd_val |= 1;
   }
 }
 
@@ -140,8 +140,8 @@ void IRAM_ATTR HOT DALIInterrupt::dali_low() {
   if (this->state == stIdle) {
     // We were idle, so this is the start of a start bit
     this->state = stStartBitH1;
-    this->rcvdBits = 0;
-    this->rcvdVal = 0;
+    this->rcvd_bits = 0;
+    this->rcvd_val = 0;
   } else if (this->state == stStartBitH2) {
     // We were in the second half of a start bit, so this is _either_ the start of a one after
     // a half-bit of delay, or the second half of a zero after two half-bits of delay.
@@ -194,12 +194,12 @@ void IRAM_ATTR HOT DALIInterrupt::dali_idle() {
     // DALI high in the middle of a one. Add that last bit and we're ready.
     this->add_bit(true);
     this->state = stFrameReady;
-    ESP_LOGD(TAG, "Frame ready, %d bits", this->rcvdBits);
+    ESP_LOGD(TAG, "Frame ready, %d bits", this->rcvd_bits);
   } else if (this->state == stFirstHalf) {
     // We saw the line go high after a zero and assumed the first half of another zero, but
     // it turned out to be a stop bit.
     this->state = stFrameReady;
-    ESP_LOGD(TAG, "Frame ready, %d bits", this->rcvdBits);
+    ESP_LOGD(TAG, "Frame ready, %d bits", this->rcvd_bits);
   } else {
     // Incorrect bit timing
     ESP_LOGD(TAG, "Unexpected stop in state %d", this->state);
