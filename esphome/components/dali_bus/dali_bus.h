@@ -49,11 +49,15 @@ struct DALIInterrupt {
   volatile uint32_t last_dali_low{0};
   volatile DALIState state{stIdle};
 
+  uint8_t rcvdBits;
+  uint32_t rcvdVal;
+
   static void gpio_intr(DALIInterrupt *d);
   static void timer_intr(DALIInterrupt *d);
 #ifdef USE_ESP_IDF
   static bool timer_intr_bool(void *d);
 #endif
+  void add_bit(bool bit);
   void dali_high();
   void dali_low();
   void dali_idle();

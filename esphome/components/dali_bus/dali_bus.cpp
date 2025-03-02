@@ -70,6 +70,14 @@ DALITime IRAM_ATTR DALIInterrupt::get_bit_time(void) {
 
 void IRAM_ATTR HOT DALIInterrupt::dali_high() {}
 
+void IRAM_ATTR HOT DALIInterrupt::add_bit(bool bit) {
+  this->rcvdBits++;
+  this->rcvdVal <<= 1;
+  if (bit) {
+    this->rcvdVal |= 1;
+  }
+}
+
 void IRAM_ATTR HOT DALIInterrupt::dali_low() {}
 
 void IRAM_ATTR HOT DALIInterrupt::dali_idle() {}
