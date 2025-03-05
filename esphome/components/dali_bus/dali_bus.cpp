@@ -292,6 +292,20 @@ void IRAM_ATTR HOT DALIInterrupt::send_next_half_bit() {
   }
 }
 
+void DALIBusComponent::wait_then_send_(struct SendMsg m) {
+  uint32_t wait_us = 12000 + 1000 * m.pri;
+  uint32_t now = micros();
+  this->send_state_ = smsAwaitSend1;
+  if (this->send_state_ == smsDone && now - this->store_.last_dali_low >= wait_us) {
+    // We're not sending and we've already waited long enough, send now
+    this->sending_ = m;
+    this->send_forward_message_(m.addr, m.msg);
+  } else {
+    // Queue up for loop to send
+    this->msg_queue_.push_back(m);
+  }
+}
+
 void DALIBusComponent::send_forward_message_(DALIAddr addr, DALIMsg msg) {
   // We don't check the state before setting stSending. Whatever was happening before,
   // we should have waited for our priority (a bunch of ms) and nothing happened in that time.
@@ -331,6 +345,64 @@ void DALIBusComponent::send_forward_message_(DALIAddr addr, DALIMsg msg) {
   // Start the start bit
   this->store_.set_dali_low();
   this->store_.start_half_bit_timer();
+}
+
+void DALIBusComponent::process_sent_message_() {
+  if (this->store_.send_state == ssFailed) {
+    this->store_.send_state = ssNone;
+    if (this->sending_.callback) {
+      this->sending_.callback(false, 0);
+    }
+    return;
+  }
+  if (this->store_.send_state != ssSuccess)
+    return;
+  this->store_.send_state = ssNone;
+  if (this->send_state_ == smsAwaitSend1) {
+    if ((this->sending_.msg >= 32 && this->sending_.msg <= 129) || this->sending_.addr == ADDR_INITIALISE ||
+        this->sending_.addr == ADDR_RANDOMISE) {
+      // This needs sending a second time
+      this->sending_.pri = priTxn;
+      this->send_state_ = smsAwaitSend2;
+      this->msg_queue_.push_front(this->sending_);
+    } else if (this->sending_.msg >= msgQueryStatus && this->sending_.msg <= msgReadMemoryLoc) {
+      // We need to wait for a reply
+      this->send_state_ = smsAwaitBackFrame;
+    } else {
+      // No resend, no back frame, done
+      this->send_state_ = smsDone;
+      if (this->sending_.callback) {
+        this->sending_.callback(true, 0);
+      }
+    }
+  } else if (this->send_state_ == smsAwaitSend2) {
+    // None of the repeated messages have a backframe.
+    this->send_state_ = smsDone;
+    if (this->sending_.callback) {
+      this->sending_.callback(true, 0);
+    }
+  }
+}
+
+void DALIBusComponent::send_message_if_ready_() {
+  if (this->msg_queue_.empty()) {
+    return;
+  }
+  struct SendMsg front = this->msg_queue_.front();
+  uint32_t now = micros();
+  if (now - this->store_.last_dali_low >= front.wait_us) {
+    // Message is ready to send
+    this->msg_queue_.pop_front();
+    this->sending_ = front;
+    this->send_forward_message_(front.addr, front.msg);
+    // We don't need to loop through other queued messages - the fact that we just started
+    // sending one means by definition that any others can't be ready to send.
+  }
+}
+
+void DALIBusComponent::loop() {
+  this->process_sent_message_();
+  this->send_message_if_ready_();
 }
 
 void DALIBusComponent::dump_config() {

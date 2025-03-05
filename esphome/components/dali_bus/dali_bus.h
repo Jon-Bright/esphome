@@ -1,5 +1,6 @@
 #pragma once
 
+#include <deque>
 #include "esphome/core/component.h"
 #include "esphome/core/gpio.h"
 
@@ -46,6 +47,7 @@ enum DALISendState : uint8_t {
   ssStopBit,
   ssSuccess,
   ssFailed,
+  ssNone,
 };
 
 // DALIAddr represents the address of a device. There are a number of "special" addresses,
@@ -182,9 +184,31 @@ struct DALIInterrupt {
   DALITime get_bit_time(void);
 };
 
+using msg_callback_t = std::function<void(bool success, uint8_t reply)>;
+
+enum SendMsgState : uint8_t {
+  smsAwaitSend1,
+  smsAwaitSend2,
+  smsAwaitBackFrame,
+  smsDone,
+};
+
+struct SendMsg {
+  // The message itself
+  DALIPri pri;
+  DALIAddr addr;
+  DALIMsg msg;
+
+  msg_callback_t callback;
+
+  // Stuff about the message
+  uint32_t wait_us;
+};
+
 class DALIBusComponent : public Component {
  public:
   void setup() override;
+  void loop() override;
   void dump_config() override;
   float get_setup_priority() const override { return setup_priority::BUS; }
 
@@ -194,12 +218,18 @@ class DALIBusComponent : public Component {
 
  protected:
   void setup_timer_();
+  void wait_then_send_(SendMsg msg);
   void send_forward_message_(DALIAddr addr, DALIMsg msg);
+  void process_sent_message_();
+  void send_message_if_ready_();
 
   InternalGPIOPin *out_pin_;
   InternalGPIOPin *in_pin_;
   bool scan_;
   DALIInterrupt store_;
+  struct SendMsg sending_;
+  SendMsgState send_state_;
+  std::deque<struct SendMsg> msg_queue_;
 };
 
 }  // namespace dali_bus
