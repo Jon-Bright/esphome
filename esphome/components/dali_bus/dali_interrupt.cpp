@@ -8,8 +8,6 @@
 namespace esphome {
 namespace dali_bus {
 
-// I've realised that this shouldn't be here, because we shouldn't be logging from an interrupt, but that
-// change will be in a separate commit
 static const char *const TAG = "dali_bus";
 
 // DALI's "low" state is "the two bus wires are shorted together". This appears to us as the pin reading high.
@@ -85,7 +83,8 @@ void IRAM_ATTR HOT DALIInterrupt::dali_high() {
       this->recv_state = rsStartBitH2;
     } else {
       // Incorrect bit timing
-      ESP_LOGD(TAG, "Wrong start 1H bit time: %d", bitTime);
+      this->debug_recv_time = bitTime;
+      this->debug_recv_err = rdWrongStartH1Time;
       this->recv_state = rsIdle;
     }
   } else if (this->recv_state == rsFirstHalf) {
@@ -98,7 +97,8 @@ void IRAM_ATTR HOT DALIInterrupt::dali_high() {
       this->start_stop_bit_timer();
     } else {
       // Incorrect bit timing
-      ESP_LOGD(TAG, "Wrong data 1H 1-bit time: %d", bitTime);
+      this->debug_recv_time = bitTime;
+      this->debug_recv_err = rdWrongDataH1OneTime;
       this->recv_state = rsIdle;
     }
   } else if (this->recv_state == rsSecondHalf) {
@@ -117,7 +117,8 @@ void IRAM_ATTR HOT DALIInterrupt::dali_high() {
       this->start_stop_bit_timer();
     } else {
       // Incorrect bit timing
-      ESP_LOGD(TAG, "Wrong data 2H zero bit time: %d", bitTime);
+      this->debug_recv_time = bitTime;
+      this->debug_recv_err = rdWrongDataH2ZeroTime;
       this->recv_state = rsIdle;
     }
   }
@@ -149,7 +150,8 @@ void IRAM_ATTR HOT DALIInterrupt::dali_low() {
       this->recv_state = rsSecondHalf;
     } else {
       // Incorrect bit timing
-      ESP_LOGD(TAG, "Wrong start 2H bit time: %d", bitTime);
+      this->debug_recv_time = bitTime;
+      this->debug_recv_err = rdWrongStartH2Time;
       this->recv_state = rsIdle;
     }
   } else if (this->recv_state == rsFirstHalf) {
@@ -162,7 +164,8 @@ void IRAM_ATTR HOT DALIInterrupt::dali_low() {
       this->recv_state = rsSecondHalf;
     } else {
       // Incorrect bit timing
-      ESP_LOGD(TAG, "Wrong data 1H 0-bit time: %d", bitTime);
+      this->debug_recv_time = bitTime;
+      this->debug_recv_err = rdWrongDataH1ZeroTime;
       this->recv_state = rsIdle;
     }
   } else if (this->recv_state == rsSecondHalf) {
@@ -178,7 +181,8 @@ void IRAM_ATTR HOT DALIInterrupt::dali_low() {
       this->received_bit(true);
     } else {
       // Incorrect bit timing
-      ESP_LOGD(TAG, "Wrong data 2H one bit time: %d", bitTime);
+      this->debug_recv_time = bitTime;
+      this->debug_recv_err = rdWrongDataH2OneTime;
       this->recv_state = rsIdle;
     }
   }
@@ -190,15 +194,14 @@ void IRAM_ATTR HOT DALIInterrupt::dali_idle() {
     // DALI high in the middle of a one. Add that last bit and we're ready.
     this->received_bit(true);
     this->recv_state = rsFrameReady;
-    ESP_LOGD(TAG, "Frame ready, %d bits", this->rcvd_bits);
   } else if (this->recv_state == rsFirstHalf) {
     // We saw the line go high after a zero and assumed the first half of another zero, but
     // it turned out to be a stop bit.
     this->recv_state = rsFrameReady;
-    ESP_LOGD(TAG, "Frame ready, %d bits", this->rcvd_bits);
   } else {
     // Incorrect bit timing
-    ESP_LOGD(TAG, "Unexpected stop in state %d", this->recv_state);
+    this->debug_recv_state = this->recv_state;
+    this->debug_recv_err = rdUnexpectedStop;
     this->recv_state = rsIdle;
   }
 }
@@ -264,6 +267,39 @@ void DALIInterrupt::begin_send(uint32_t to_send, uint32_t send_bits) {
   // Start the start bit
   this->set_dali_low();
   this->start_half_bit_timer();
+}
+
+void DALIInterrupt::log_any_recv_errors() {
+  switch (this->debug_recv_err) {
+    case rdNoDebugInfo:
+      // Nothing to do
+      return;
+    case rdWrongStartH1Time:
+      ESP_LOGD(TAG, "Wrong start 1H bit time: %u", this->debug_recv_time);
+      break;
+    case rdWrongDataH1OneTime:
+      ESP_LOGD(TAG, "Wrong data 1H 1-bit time: %u", this->debug_recv_time);
+      break;
+    case rdWrongDataH2ZeroTime:
+      ESP_LOGD(TAG, "Wrong data 2H zero bit time: %u", this->debug_recv_time);
+      break;
+    case rdWrongStartH2Time:
+      ESP_LOGD(TAG, "Wrong start 2H bit time: %u", this->debug_recv_time);
+      break;
+    case rdWrongDataH1ZeroTime:
+      ESP_LOGD(TAG, "Wrong data 1H 0-bit time: %u", this->debug_recv_time);
+      break;
+    case rdWrongDataH2OneTime:
+      ESP_LOGD(TAG, "Wrong data 2H one bit time: %u", this->debug_recv_time);
+      break;
+    case rdUnexpectedStop:
+      ESP_LOGD(TAG, "Unexpected stop in state %u", this->debug_recv_state);
+      break;
+  }
+
+  this->debug_recv_err = rdNoDebugInfo;
+  this->debug_recv_state = rsIdle;
+  this->debug_recv_time = 0;
 }
 
 }  // namespace dali_bus

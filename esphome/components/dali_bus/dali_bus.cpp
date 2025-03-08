@@ -150,6 +150,7 @@ void DALIBusComponent::send_message_if_ready_() {
 }
 
 void DALIBusComponent::loop() {
+  this->store_.log_any_recv_errors();
   this->process_sent_message_();
   this->send_message_if_ready_();
 }

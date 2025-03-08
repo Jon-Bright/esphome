@@ -146,12 +146,26 @@ enum DALIMsg : uint8_t {
   msgAppExtCmdBase = 0xe0,
 };
 
+enum DALIRecvDebug : uint8_t {
+  rdNoDebugInfo,
+  rdWrongStartH1Time,
+  rdWrongDataH1OneTime,
+  rdWrongDataH2ZeroTime,
+  rdWrongStartH2Time,
+  rdWrongDataH1ZeroTime,
+  rdWrongDataH2OneTime,
+  rdUnexpectedStop,
+};
+
 struct DALIInterrupt {
   ISRInternalGPIOPin in_pin;
   ISRInternalGPIOPin out_pin;
 #ifdef USE_ESP32_FRAMEWORK_ARDUINO
   hw_timer_t *timer;
 #endif
+  volatile DALIRecvDebug debug_recv_err;
+  volatile uint32_t debug_recv_time;
+  volatile DALIRecvState debug_recv_state;
 
   volatile uint32_t last_dali_high{0};
   volatile uint32_t last_dali_low{0};
@@ -181,6 +195,7 @@ struct DALIInterrupt {
   void start_half_bit_timer(void);
   void stop_stop_bit_timer(void);
   void begin_send(uint32_t to_send, uint32_t send_bits);
+  void log_any_recv_errors();
 
   DALITime get_bit_time(void);
 };
