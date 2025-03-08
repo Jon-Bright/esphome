@@ -117,6 +117,7 @@ void DALIBusComponent::process_sent_message_() {
     } else if (this->sending_.msg >= msgQueryStatus && this->sending_.msg <= msgReadMemoryLoc) {
       // We need to wait for a reply
       this->send_state_ = smsAwaitBackFrame;
+      this->back_frame_wait_start_ = micros();
     } else {
       // No resend, no back frame, done
       this->send_state_ = smsDone;
@@ -129,6 +130,33 @@ void DALIBusComponent::process_sent_message_() {
     this->send_state_ = smsDone;
     if (this->sending_.callback) {
       this->sending_.callback(true, 0);
+    }
+  }
+}
+
+void DALIBusComponent::process_back_frames_() {
+  if (this->send_state_ != smsAwaitBackFrame) {
+    // Not awaiting a back frame, nothing to do
+    return;
+  }
+  if (this->store_.recv_state == rsFrameReady) {
+    // Yay, a frame!
+    bool success = (this->store_.rcvd_bits == 8);  // We only want 8-bit replies
+    if (this->sending_.callback) {
+      this->sending_.callback(success, this->store_.rcvd_val);
+    }
+    this->send_state_ = smsDone;
+  } else {
+    // No frame yet.  Check whether we timed out waiting.
+    uint32_t now = micros();
+    // 20ms == 10.5ms max settle time, plus 1 start bit + 8 data bits at 1ms/bit, rounded up
+    const uint32_t back_frame_timeout = 20 * 1000;
+    if (now - this->back_frame_wait_start_ >= back_frame_timeout) {
+      // We're done waiting, error out
+      if (this->sending_.callback) {
+        this->sending_.callback(false, 0);
+      }
+      this->send_state_ = smsDone;
     }
   }
 }
@@ -152,6 +180,7 @@ void DALIBusComponent::send_message_if_ready_() {
 void DALIBusComponent::loop() {
   this->store_.log_any_recv_errors();
   this->process_sent_message_();
+  this->process_back_frames_();
   this->send_message_if_ready_();
 }
 

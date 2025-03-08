@@ -239,6 +239,7 @@ class DALIBusComponent : public Component {
   void wait_then_send_(SendMsg msg);
   void send_forward_message_(DALIAddr addr, DALIMsg msg);
   void process_sent_message_();
+  void process_back_frames_();
   void send_message_if_ready_();
 
   InternalGPIOPin *out_pin_;
@@ -247,6 +248,7 @@ class DALIBusComponent : public Component {
   DALIInterrupt store_;
   struct SendMsg sending_;
   SendMsgState send_state_;
+  uint32_t back_frame_wait_start_;
   std::deque<struct SendMsg> msg_queue_;
 };
 
