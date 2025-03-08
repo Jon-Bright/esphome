@@ -195,7 +195,7 @@ void IRAM_ATTR HOT DALIInterrupt::dali_low() {
     // for a half-bit.
     if (bitTime == tiHalfBit) {
       // Yep, this was the first half of a zero. Now second half. (Stop bit can't follow without
-      // an adge change back to high.)
+      // an edge change back to high.)
       this->recv_state = rsSecondHalf;
     } else {
       // Incorrect bit timing
