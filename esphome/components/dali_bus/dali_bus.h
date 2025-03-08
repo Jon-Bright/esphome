@@ -28,6 +28,16 @@ enum DALIRecvState : uint8_t {
   rsFirstHalf,   // We're receiving the first half of a normal data bit
   rsSecondHalf,  // We're receiving the second half of a normal data bit
   rsFrameReady,  // We've seen a stop bit, so our data frame is ready
+  rsError,       // We saw an error
+};
+
+enum DALICallbackResult : uint8_t {
+  crSuccess,        // Success, no back frame
+  crSendFailed,     // Send failed
+  crGoodBackFrame,  // Sucess, back frame received in time, no encoding errors, 8 bits
+  crWrongLength,    // Back frame had more or less than 8 bits
+  crTimingError,    // Back frame had some kind of timing error
+  crNoBackFrame,    // We just didn't see anything. Might not be an error.
 };
 
 // DALITime represents what the time between two edges on the input pin can validly represent
@@ -200,7 +210,7 @@ struct DALIInterrupt {
   DALITime get_bit_time(void);
 };
 
-using msg_callback_t = std::function<void(bool success, uint8_t reply)>;
+using msg_callback_t = std::function<void(DALICallbackResult success, uint8_t reply)>;
 
 enum SendMsgState : uint8_t {
   smsAwaitSend1,
@@ -232,7 +242,7 @@ class DALIBusComponent : public Component {
   void set_dali_out_pin(InternalGPIOPin *out_pin) { out_pin_ = out_pin; }
   void set_dali_in_pin(InternalGPIOPin *in_pin) { in_pin_ = in_pin; }
 
-  void send_reset(DALIAddr addr);
+  void send_reset(DALIAddr addr, msg_callback_t cb);
 
  protected:
   void setup_timer_();

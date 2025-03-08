@@ -85,7 +85,7 @@ void IRAM_ATTR HOT DALIInterrupt::dali_high() {
       // Incorrect bit timing
       this->debug_recv_time = bitTime;
       this->debug_recv_err = rdWrongStartH1Time;
-      this->recv_state = rsIdle;
+      this->recv_state = rsError;
     }
   } else if (this->recv_state == rsFirstHalf) {
     // We were in the first half of a normal bit, which implies that the previous state
@@ -99,7 +99,7 @@ void IRAM_ATTR HOT DALIInterrupt::dali_high() {
       // Incorrect bit timing
       this->debug_recv_time = bitTime;
       this->debug_recv_err = rdWrongDataH1OneTime;
-      this->recv_state = rsIdle;
+      this->recv_state = rsError;
     }
   } else if (this->recv_state == rsSecondHalf) {
     // We were in the second half of a normal bit. This implies the last edge was a change to
@@ -119,7 +119,7 @@ void IRAM_ATTR HOT DALIInterrupt::dali_high() {
       // Incorrect bit timing
       this->debug_recv_time = bitTime;
       this->debug_recv_err = rdWrongDataH2ZeroTime;
-      this->recv_state = rsIdle;
+      this->recv_state = rsError;
     }
   }
 }
@@ -152,7 +152,7 @@ void IRAM_ATTR HOT DALIInterrupt::dali_low() {
       // Incorrect bit timing
       this->debug_recv_time = bitTime;
       this->debug_recv_err = rdWrongStartH2Time;
-      this->recv_state = rsIdle;
+      this->recv_state = rsError;
     }
   } else if (this->recv_state == rsFirstHalf) {
     // We were in the first half of a normal bit, which implies that the previous state
@@ -166,7 +166,7 @@ void IRAM_ATTR HOT DALIInterrupt::dali_low() {
       // Incorrect bit timing
       this->debug_recv_time = bitTime;
       this->debug_recv_err = rdWrongDataH1ZeroTime;
-      this->recv_state = rsIdle;
+      this->recv_state = rsError;
     }
   } else if (this->recv_state == rsSecondHalf) {
     // We were in the second half of a normal bit. This implies the last edge was a change to
@@ -183,7 +183,7 @@ void IRAM_ATTR HOT DALIInterrupt::dali_low() {
       // Incorrect bit timing
       this->debug_recv_time = bitTime;
       this->debug_recv_err = rdWrongDataH2OneTime;
-      this->recv_state = rsIdle;
+      this->recv_state = rsError;
     }
   }
 }
@@ -202,7 +202,7 @@ void IRAM_ATTR HOT DALIInterrupt::dali_idle() {
     // Incorrect bit timing
     this->debug_recv_state = this->recv_state;
     this->debug_recv_err = rdUnexpectedStop;
-    this->recv_state = rsIdle;
+    this->recv_state = rsError;
   }
 }
 

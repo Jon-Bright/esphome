@@ -100,7 +100,7 @@ void DALIBusComponent::process_sent_message_() {
   if (this->store_.send_state == ssFailed) {
     this->store_.send_state = ssNone;
     if (this->sending_.callback) {
-      this->sending_.callback(false, 0);
+      this->sending_.callback(crSendFailed, 0);
     }
     return;
   }
@@ -122,14 +122,14 @@ void DALIBusComponent::process_sent_message_() {
       // No resend, no back frame, done
       this->send_state_ = smsDone;
       if (this->sending_.callback) {
-        this->sending_.callback(true, 0);
+        this->sending_.callback(crSuccess, 0);
       }
     }
   } else if (this->send_state_ == smsAwaitSend2) {
     // None of the repeated messages have a backframe.
     this->send_state_ = smsDone;
     if (this->sending_.callback) {
-      this->sending_.callback(true, 0);
+      this->sending_.callback(crSuccess, 0);
     }
   }
 }
@@ -141,10 +141,20 @@ void DALIBusComponent::process_back_frames_() {
   }
   if (this->store_.recv_state == rsFrameReady) {
     // Yay, a frame!
-    bool success = (this->store_.rcvd_bits == 8);  // We only want 8-bit replies
-    if (this->sending_.callback) {
-      this->sending_.callback(success, this->store_.rcvd_val);
+    DALICallbackResult cr;
+    if (this->store_.rcvd_bits == 8) {
+      cr = crGoodBackFrame;
+    } else {
+      cr = crWrongLength;
     }
+    if (this->sending_.callback) {
+      this->sending_.callback(cr, this->store_.rcvd_val);
+    }
+    this->send_state_ = smsDone;
+  } else if (this->store_.recv_state == rsError) {
+    // We detected an error with the frame
+    this->sending_.callback(crTimingError, 0);
+    this->store_.recv_state = rsIdle;
     this->send_state_ = smsDone;
   } else {
     // No frame yet.  Check whether we timed out waiting.
@@ -154,7 +164,7 @@ void DALIBusComponent::process_back_frames_() {
     if (now - this->back_frame_wait_start_ >= back_frame_timeout) {
       // We're done waiting, error out
       if (this->sending_.callback) {
-        this->sending_.callback(false, 0);
+        this->sending_.callback(crNoBackFrame, 0);
       }
       this->send_state_ = smsDone;
     }
@@ -191,11 +201,12 @@ void DALIBusComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "  Scan: ", YESNO(this->scan_));
 }
 
-void DALIBusComponent::send_reset(DALIAddr addr) {
+void DALIBusComponent::send_reset(DALIAddr addr, msg_callback_t cb) {
   SendMsg m{
     pri: priConfig,
     addr: (DALIAddr) ((addr << 1) | 1),
     msg: msgReset,
+    callback: cb,
   };
   this->wait_then_send_(m);
 }
