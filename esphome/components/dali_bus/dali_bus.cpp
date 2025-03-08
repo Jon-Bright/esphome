@@ -162,5 +162,14 @@ void DALIBusComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "  Scan: ", YESNO(this->scan_));
 }
 
+void DALIBusComponent::send_reset(DALIAddr addr) {
+  SendMsg m{
+    pri: priConfig,
+    addr: (DALIAddr) ((addr << 1) | 1),
+    msg: msgReset,
+  };
+  this->wait_then_send_(m);
+}
+
 }  // namespace dali_bus
 }  // namespace esphome

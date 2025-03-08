@@ -232,6 +232,8 @@ class DALIBusComponent : public Component {
   void set_dali_out_pin(InternalGPIOPin *out_pin) { out_pin_ = out_pin; }
   void set_dali_in_pin(InternalGPIOPin *in_pin) { in_pin_ = in_pin; }
 
+  void send_reset(DALIAddr addr);
+
  protected:
   void setup_timer_();
   void wait_then_send_(SendMsg msg);
