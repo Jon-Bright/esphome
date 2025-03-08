@@ -180,6 +180,7 @@ struct DALIInterrupt {
   void start_stop_bit_timer(void);
   void start_half_bit_timer(void);
   void stop_stop_bit_timer(void);
+  void begin_send(uint32_t to_send, uint32_t send_bits);
 
   DALITime get_bit_time(void);
 };
