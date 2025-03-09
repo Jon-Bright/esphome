@@ -231,6 +231,23 @@ struct SendMsg {
   uint32_t wait_us;
 };
 
+// Where we are in the process of readdressing lamps
+enum AddressState : uint8_t {
+  asInactive,
+  asReset,
+  asLampOff,
+  asInitialise,
+  asRandomise,
+  asWaitAfterRandomise,
+  asSearchAddrH,
+  asSearchAddrM,
+  asSearchAddrL,
+  asCompare,
+  asProgramShortAddr,
+  asVerifyShortAddr,
+  asWithdraw,
+};
+
 class DALIBusComponent : public Component {
  public:
   void setup() override;
@@ -251,6 +268,7 @@ class DALIBusComponent : public Component {
   void process_sent_message_();
   void process_back_frames_();
   void send_message_if_ready_();
+  void addressing_cb_(DALICallbackResult cr, uint8_t reply);
 
   InternalGPIOPin *out_pin_;
   InternalGPIOPin *in_pin_;
@@ -260,6 +278,13 @@ class DALIBusComponent : public Component {
   SendMsgState send_state_;
   uint32_t back_frame_wait_start_;
   std::deque<struct SendMsg> msg_queue_;
+
+  AddressState addr_state_;
+  uint32_t addr_wait_start_;
+  uint32_t addr_min_;
+  uint32_t addr_max_;
+  uint8_t addr_short_;
+  msg_callback_t addr_cb_;
 };
 
 }  // namespace dali_bus

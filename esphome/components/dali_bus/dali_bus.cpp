@@ -46,6 +46,14 @@ void DALIBusComponent::setup() {
   this->store_.in_pin = this->in_pin_->to_isr();
 
   this->in_pin_->attach_interrupt(DALIInterrupt::gpio_intr, &this->store_, gpio::INTERRUPT_ANY_EDGE);
+
+  if (this->scan_) {
+    this->addr_state_ = asReset;
+    this->addr_cb_ = std::bind(&DALIBusComponent::addressing_cb_, this, std::placeholders::_1, std::placeholders::_2);
+    this->send_reset(ADDR_BROADCAST, this->addr_cb_);
+  } else {
+    this->addr_state_ = asInactive;
+  }
 }
 
 void DALIBusComponent::wait_then_send_(struct SendMsg m) {
@@ -184,6 +192,54 @@ void DALIBusComponent::send_message_if_ready_() {
     this->send_forward_message_(front.addr, front.msg);
     // We don't need to loop through other queued messages - the fact that we just started
     // sending one means by definition that any others can't be ready to send.
+  }
+}
+
+void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
+  if (cr == crSendFailed ||
+      (this->addr_state_ != asCompare && this->addr_state_ != asVerifyShortAddr && cr != crSuccess)) {
+    ESP_LOGW(TAG, "Failed Readdressing, state %u, min %u, max %u, short %u", this->addr_state_, this->addr_min_,
+             this->addr_max_, this->addr_short_);
+    this->addr_state_ = asInactive;
+    return;
+  }
+  SendMsg m;
+  m.callback = this->addr_cb_;
+
+  switch (this->addr_state_) {
+    case asInactive:
+      // Should not happen
+      ESP_LOGE(TAG, "addressing_cb_ called while addressing inactive");
+      break;
+    case asReset:
+      m.pri = priAuto;
+      m.addr = ADDR_BROADCAST;
+      m.msg = msgOff;
+      this->addr_state_ = asLampOff;
+      this->wait_then_send_(m);
+      break;
+    case asLampOff:
+      break;
+    case asInitialise:
+      break;
+    case asRandomise:
+      break;
+    case asWaitAfterRandomise:
+      break;
+    case asSearchAddrH:
+      break;
+    case asSearchAddrM:
+      break;
+    case asSearchAddrL:
+      break;
+    case asCompare:
+      break;
+    case asProgramShortAddr:
+      break;
+    case asVerifyShortAddr:
+      break;
+    case asWithdraw:
+      break;
   }
 }
 
