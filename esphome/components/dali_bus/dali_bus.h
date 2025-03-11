@@ -235,10 +235,13 @@ struct SendMsg {
 enum AddressState : uint8_t {
   asInactive,
   asReset,
+  asResetWait,
   asLampOff,
   asInitialise,
   asRandomise,
-  asWaitAfterRandomise,
+  asRandomiseWait,
+  asResetParams,
+  asReadySend,
   asSearchAddrH,
   asSearchAddrM,
   asSearchAddrL,
@@ -269,6 +272,8 @@ class DALIBusComponent : public Component {
   void process_back_frames_();
   void send_message_if_ready_();
   void addressing_cb_(DALICallbackResult cr, uint8_t reply);
+  void terminate_addressing_(bool success);
+  void process_addr_wait_();
 
   InternalGPIOPin *out_pin_;
   InternalGPIOPin *in_pin_;
@@ -283,7 +288,8 @@ class DALIBusComponent : public Component {
   uint32_t addr_wait_start_;
   uint32_t addr_min_;
   uint32_t addr_max_;
-  uint8_t addr_short_;
+  uint32_t addr_mid_;
+  DALIMsg addr_short_;
   msg_callback_t addr_cb_;
 };
 

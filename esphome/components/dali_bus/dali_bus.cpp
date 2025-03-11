@@ -195,12 +195,62 @@ void DALIBusComponent::send_message_if_ready_() {
   }
 }
 
+// This callback implements (most of) the state machine for assigning short addresses to lamps on
+// the bus. The full procedure is:
+//  1. Broadcast a reset. This clears any previously assigned short address and likely turns the
+//     lamps on. Lamps are only required to react 300ms after this reset. We're supposed to wait
+//     350ms before sending commands.
+//  2. Wait 350ms.
+//  3. Broadcast an "off" message, for two reasons: (a) this avoids potentially quite bright
+//     lamps remaining on for the duration of addressing, which could be quite a while if there
+//     are many devices on the bus. (b) it's an early visual sign that the controller is
+//     successfully controlling the bus.
+//  4. Broadcast the "initialise" command, which enables the commands which are to follow.
+//  5. Broadcast the "randomise" command, which tells the lamps to pick random 24-bit "long"
+//     addresses. This random address setting is to be completed by the lamps within 100ms.
+//  6. Wait for those 100ms. (This is implemented in the main loop, as we're not waiting on a
+//     callback.) Set the next short address to 0.
+//  7. Set min=0, max=fffffe, being the minimum and maximum permitted long address.
+//  8. Start finding devices. Take the midpoint of the current min/max range. Send the high byte
+//     of that midpoint.
+//  9. Send the middle byte of the midpoint.
+// 10. Send the low byte of the midpoint.
+// 11. Send a compare message. This asks any lamp with a long address <= the search address sent
+//     in steps 8-10 to reply. This may lead to multiple replies (because multiple lamps are in
+//     the queried address segment). All of the replying lamps should be sending 0xFF as their
+//     reply, but slight timing differences between the lamps may mean that their otherwise
+//     identical replies appear to us as mistimed frames.
+// 12. Receive a backward frame, or no frame. Because of the issue mentioned above, we _accept_
+//     mistimed frames here. The three cases we care about are:
+//     a) "failed to send" (an error, stop), dealt with prior to the main switch(),
+//     b) "no reply" (there's no lamp below mid), and
+//     c) "any kind of reply, including a broken one" (there's at least one lamp below mid)
+//     If we get a reply and min==max, then we've found a lamp's long address - jump to step 13.
+//     If we get a reply with min!=max, then there's at least one lamp in the bottom half of the
+//     searched space. Set max to the midpoint and go back to step 8, meaning we'll search the
+//     bottom half. (It's not a problem if there's a lamp in the top half _too_, we'll get it
+//     later, see step 16 below.)
+//     If we _don't_ get a reply, set min to mid+1 (the compare command is inclusive of mid) and
+//     again go back to step 8. (If this adjustment results in mid>max, stop - there is no lamp
+//     to be found, stop.)
+// 13. We found a lamp! Program it with the next short address.
+// 14. Verify its short address. We don't accept broken back frames here - only one lamp should
+//     be replying. Increment the next short address by one.
+// 15. Withdraw the lamp we found from consideration. It won't reply to future compare messages
+//     even if it would otherwise match.
+// 16. Go back to step 7 above (resetting min and max and starting a new search to find another
+//     device).
+//
+// Steps 7-11 represent a binary search for lamp long addresses. You can see a worked example of
+// what the search looks like in addr_example.txt. Notably it always ends with an unsuccessful
+// search (when all lamps have been identified).
+
 void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
   if (cr == crSendFailed ||
       (this->addr_state_ != asCompare && this->addr_state_ != asVerifyShortAddr && cr != crSuccess)) {
     ESP_LOGW(TAG, "Failed Readdressing, state %u, min %u, max %u, short %u", this->addr_state_, this->addr_min_,
              this->addr_max_, this->addr_short_);
-    this->addr_state_ = asInactive;
+    this->terminate_addressing_(false);
     return;
   }
   SendMsg m;
@@ -212,34 +262,184 @@ void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
       ESP_LOGE(TAG, "addressing_cb_ called while addressing inactive");
       break;
     case asReset:
-      m.pri = priAuto;
+      // Step 2: We sent the reset. Start waiting for 350ms. We'll be called back from
+      // process_addr_wait_ (as we're not waiting for a message callback).
+      this->addr_wait_start_ = micros();
+      this->addr_state_ = asResetWait;
+      break;
+    case asResetWait:
+      // Step 3
+      m.pri = priTxn;
       m.addr = ADDR_BROADCAST;
       m.msg = msgOff;
       this->addr_state_ = asLampOff;
       this->wait_then_send_(m);
       break;
     case asLampOff:
+      // Step 4
+      m.pri = priTxn;
+      m.addr = ADDR_INITIALISE;
+      m.msg = (DALIMsg) 0;
+      this->addr_state_ = asInitialise;
+      this->wait_then_send_(m);
       break;
     case asInitialise:
+      // Step 5
+      m.pri = priTxn;
+      m.addr = ADDR_RANDOMISE;
+      m.msg = (DALIMsg) 0;
+      this->addr_state_ = asRandomise;
+      this->wait_then_send_(m);
       break;
     case asRandomise:
+      // Step 6
+      // No message to send here, just setting the state will cause the main loop to call us
+      // back when the 100ms wait is finished.
+      this->addr_state_ = asRandomiseWait;
       break;
-    case asWaitAfterRandomise:
+    case asRandomiseWait:
+    case asResetParams:
+      // Step 7
+      this->addr_min_ = 0;
+      this->addr_max_ = 0xfffffe;
+      // Fallthrough
+    case asReadySend:
+      // Step 8
+      this->addr_mid_ = (this->addr_min_ + this->addr_max_) / 2;
+      m.pri = priTxn;
+      m.addr = ADDR_SEARCH_ADDR_H;
+      m.msg = (DALIMsg) ((this->addr_mid_ >> 16) & 0xFF);
+      this->addr_state_ = asSearchAddrH;
+      this->wait_then_send_(m);
       break;
     case asSearchAddrH:
+      // Step 9
+      m.pri = priTxn;
+      m.addr = ADDR_SEARCH_ADDR_M;
+      m.msg = (DALIMsg) ((this->addr_mid_ >> 8) & 0xFF);
+      this->addr_state_ = asSearchAddrM;
+      this->wait_then_send_(m);
       break;
     case asSearchAddrM:
+      // Step 10
+      m.pri = priTxn;
+      m.addr = ADDR_SEARCH_ADDR_L;
+      m.msg = (DALIMsg) (this->addr_mid_ & 0xFF);
+      this->addr_state_ = asSearchAddrL;
+      this->wait_then_send_(m);
       break;
     case asSearchAddrL:
+      // Step 11
+      m.pri = priTxn;
+      m.addr = ADDR_COMPARE;
+      m.msg = (DALIMsg) 0;
+      this->addr_state_ = asCompare;
+      this->wait_then_send_(m);
       break;
     case asCompare:
+      // Step 12
+      // "Failed to send" is dealt with above
+      if (cr == crSuccess) {
+        // Shouldn't happen
+        ESP_LOGE(TAG, "crSuccess on asCompare, min %u, max %u, short %u", this->addr_min_, this->addr_max_,
+                 this->addr_short_);
+        this->terminate_addressing_(false);
+        return;
+      } else if (cr == crWrongLength) {
+        ESP_LOGW(TAG, "Wrong length on asCompare, min %u, max %u, short %u, bits %d", this->addr_min_, this->addr_max_,
+                 this->addr_short_, this->store_.rcvd_bits);
+      } else if (cr == crTimingError) {
+        ESP_LOGW(TAG, "Wrong length on asCompare, min %u, max %u, short %u, bits %d", this->addr_min_, this->addr_max_,
+                 this->addr_short_, this->store_.rcvd_bits);
+      }
+      if (cr == crNoBackFrame) {  // There are three "got a frame" codes, but this one is unique
+        // Case 12b
+        this->addr_min_ = this->addr_mid_ + 1;
+        if (this->addr_min_ > this->addr_max_) {
+          // We've finished our search, no more lamps
+          this->terminate_addressing_(true);
+        } else {
+          // Ready to search again
+          this->addr_state_ = asReadySend;
+          // Call ourselves to kick that off
+          this->addressing_cb_(crSuccess, (DALIAddr) 0);
+        }
+      } else {
+        // Case 12c
+        if (this->addr_min_ == this->addr_max_) {
+          // Step 13
+          // We found a lamp! Program its short address.
+          // Theoretically, we could be a bit more strict about replies here. It'd be a bit
+          // weird if two lamps replied with min==max. But, YOLO. It's probably fine.
+          m.pri = priTxn;
+          m.addr = ADDR_PROGRAM_SHORT_ADDR;
+          m.msg = this->addr_short_;
+          this->addr_state_ = asProgramShortAddr;
+          this->wait_then_send_(m);
+        } else {
+          this->addr_max_ = this->addr_mid_;
+          // Ready to search again
+          this->addr_state_ = asReadySend;
+          // Call ourselves to kick that off
+          this->addressing_cb_(crSuccess, (DALIAddr) 0);
+        }
+      }
       break;
     case asProgramShortAddr:
+      // Step 14
+      m.pri = priTxn;
+      m.addr = ADDR_VERIFY_SHORT_ADDR;
+      m.msg = this->addr_short_;
+      this->addr_state_ = asVerifyShortAddr;
+      this->wait_then_send_(m);
+
+      this->addr_short_ = (DALIMsg) (this->addr_short_ + 1);
       break;
     case asVerifyShortAddr:
+      // Step 15
+      m.pri = priTxn;
+      m.addr = ADDR_WITHDRAW;
+      m.msg = (DALIMsg) 0;
+      this->addr_state_ = asWithdraw;
+      this->wait_then_send_(m);
       break;
     case asWithdraw:
+      // Ready to reset min/max and start an entirely new search
+      this->addr_state_ = asResetParams;
+      // Call ourselves to kick that off
+      this->addressing_cb_(crSuccess, (DALIAddr) 0);
       break;
+  }
+}
+
+void DALIBusComponent::terminate_addressing_(bool success) {
+  if (this->addr_state_ >= asInitialise) {
+    // We sent initialise, so we should terminate to get back out of config mode
+    SendMsg m;
+    m.pri = priAuto;
+    m.addr = ADDR_TERMINATE;
+    m.msg = (DALIMsg) 0;
+    // We don't set a callback here - terminate works or it doesn't, we did our best
+    this->addr_state_ = asInactive;
+    this->wait_then_send_(m);
+  } else {
+    this->addr_state_ = asInactive;
+  }
+}
+
+void DALIBusComponent::process_addr_wait_() {
+  if (this->addr_state_ == asResetWait) {
+    uint32_t now = micros();
+    const uint32_t reset_wait = 350 * 1000;  // 350ms
+    if (now - this->addr_wait_start_ >= reset_wait) {
+      this->addressing_cb_(crSuccess, 0);
+    }
+  } else if (this->addr_state_ == asRandomiseWait) {
+    uint32_t now = micros();
+    const uint32_t randomise_wait = 100 * 1000;  // 100ms
+    if (now - this->addr_wait_start_ >= randomise_wait) {
+      this->addressing_cb_(crSuccess, 0);
+    }
   }
 }
 
@@ -247,6 +447,7 @@ void DALIBusComponent::loop() {
   this->store_.log_any_recv_errors();
   this->process_sent_message_();
   this->process_back_frames_();
+  this->process_addr_wait_();
   this->send_message_if_ready_();
 }
 

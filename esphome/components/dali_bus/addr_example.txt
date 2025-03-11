@@ -1,0 +1,109 @@
+Let's say we have three lamps that, upon randomise, pick long addresses 0x123456, 0x234567 and
+0xfedcba. We'd see the following:
+
+min    max    mid    reply?
+000000 fffffe 7fffff yes (from lamps 1+2, might be mistimed)
+000000 7fffff 3fffff yes (from lamps 1+2, might be mistimed)
+000000 3fffff 1fffff yes (from lamp 1)
+000000 1fffff 0fffff no
+100000 1fffff 17ffff yes (from lamp 1)
+100000 17ffff 13ffff yes (from lamp 1)
+100000 13ffff 11ffff no
+120000 13ffff 12ffff yes (from lamp 1)
+120000 12ffff 127fff yes (from lamp 1)
+120000 127fff 123fff yes (from lamp 1)
+120000 123fff 121fff no
+122000 123fff 122fff no
+123000 123fff 1237ff yes (from lamp 1)
+123000 1237ff 1233ff no
+123400 1237ff 1235ff yes (from lamp 1)
+123400 1235ff 1234ff yes (from lamp 1)
+123400 1234ff 12347f yes (from lamp 1)
+123400 12347f 12343f no
+123440 12347f 12345f yes (from lamp 1)
+123440 12345f 12344f no
+123450 12345f 123457 yes (from lamp 1)
+123450 123457 123453 no
+123454 123457 123455 no
+123456 123457 123456 yes (from lamp 1 - mid is inclusive)
+123456 123456 123456 yes (from lamp 1)
+Program and verify lamp 1 with short address 0. Withdraw it from future comparisons.
+Reset min and max to 000000, fffffe
+000000 fffffe 7fffff yes (from lamp 2)
+000000 7fffff 3fffff yes (from lamp 2)
+000000 3fffff 1fffff no
+200000 3fffff 2fffff yes (from lamp 2)
+200000 2fffff 27ffff yes (from lamp 2)
+200000 27ffff 23ffff yes (from lamp 2)
+200000 23ffff 21ffff no
+220000 23ffff 22ffff no
+230000 23ffff 237fff yes (from lamp 2)
+230000 237fff 233fff no
+234000 237fff 235fff yes (from lamp 2)
+234000 235fff 234fff yes (from lamp 2)
+234000 234fff 2347ff yes (from lamp 2)
+234000 2347ff 2343ff no
+234400 2347ff 2345ff yes (from lamp 2)
+234400 2345ff 2344ff no
+234500 2345ff 23457f yes (from lamp 2)
+234500 23457f 23453f no
+234540 23457f 23455f no
+234560 23457f 23456f yes (from lamp 2)
+234560 23456f 234567 yes (from lamp 2)
+234560 234567 234563 no
+234564 234567 234565 no
+234566 234567 234566 no
+234567 234567 234567 yes (from lamp 2)
+Program and verify lamp 2 with short address 1. Withdraw it from future comparisons.
+Reset min and max to 000000, fffffe
+000000 fffffe 7fffff no
+800000 fffffe bfffff no
+c00000 fffffe dfffff no
+e00000 fffffe efffff no
+f00000 fffffe f7ffff no
+f80000 fffffe fbffff no
+fc0000 fffffe fdffff no
+fe0000 fffffe feffff yes (from lamp 3)
+fe0000 feffff fe7fff no
+fe8000 feffff febfff no
+fec000 feffff fedfff yes (from lamp 3)
+fec000 fedfff fecfff no
+fed000 fedfff fed7ff no
+fed800 fedfff fedbff no
+fedc00 fedfff feddff yes (from lamp 3)
+fedc00 feddff fedcff yes (from lamp 3)
+fedc00 fedcff fedc7f no
+fedc80 fedcff fedcbf yes (from lamp 3)
+fedc80 fedcbf fedc9f no
+fedca0 fedcbf fedcaf no
+fedcb0 fedcbf fedcb7 no
+fedcb8 fedcbf fedcbb yes (from lamp 3)
+fedcb8 fedcbb fedcb9 no
+fedcba fedcbb fedcba yes (from lamp 3)
+fedcba fedcba fedcba yes (from lamp 3)
+Program and verify lamp 3 with short address 2. Withdraw it from future comparisons.
+Reset min and max to 000000, fffffe. There are no lamps left, but we don't know that yet.
+000000 fffffe 7fffff no
+800000 fffffe bfffff no
+c00000 fffffe dfffff no
+e00000 fffffe efffff no
+f00000 fffffe f7ffff no
+f80000 fffffe fbffff no
+fc0000 fffffe fdffff no
+fe0000 fffffe feffff no
+ff0000 fffffe ff7fff no
+ff8000 fffffe ffbfff no
+ffc000 fffffe ffefff no
+fff000 fffffe fff7ff no
+fff800 fffffe fffbff no
+fffc00 fffffe fffeff no
+ffff00 fffffe ffff7f no
+ffff80 fffffe ffffbf no
+ffffc0 fffffe ffffef no
+fffff0 fffffe fffff7 no
+fffff8 fffffe fffffb no
+fffffc fffffe fffffd no
+fffffe fffffe fffffe no
+ffffff fffffe -> stop, min > max
+
+This completes the addressing process, having found three lamps.
