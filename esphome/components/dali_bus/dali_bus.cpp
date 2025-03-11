@@ -241,7 +241,7 @@ void DALIBusComponent::send_message_if_ready_() {
 // 16. Go back to step 7 above (resetting min and max and starting a new search to find another
 //     device).
 //
-// Steps 7-11 represent a binary search for lamp long addresses. You can see a worked example of
+// Steps 8-12 represent a binary search for lamp long addresses. You can see a worked example of
 // what the search looks like in addr_example.txt. Notably it always ends with an unsuccessful
 // search (when all lamps have been identified).
 
