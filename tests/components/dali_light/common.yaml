@@ -1,0 +1,8 @@
+dali_bus:
+  id: dali_bus1
+  dali_out_pin: ${dali_out_pin}
+  dali_in_pin: ${dali_in_pin}
+
+dali_light:
+  id: dali_light1
+  light_id: 0
