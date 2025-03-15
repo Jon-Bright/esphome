@@ -110,6 +110,7 @@ void DALIBusComponent::send_forward_message_(DALIAddr addr, DALIMsg msg) {
 
 void DALIBusComponent::process_sent_message_() {
   if (this->store_.send_state == ssFailed) {
+    ESP_LOGD(TAG, "Sending message failed");
     this->store_.send_state = ssNone;
     if (this->sending_.callback) {
       this->sending_.callback(crSendFailed, 0);
@@ -314,6 +315,7 @@ void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
     case asReadySend:
       // Step 8
       this->addr_mid_ = (this->addr_min_ + this->addr_max_) / 2;
+      ESP_LOGD(TAG, "Searching with min %06X, max %06X, mid %06X", this->addr_min_, this->addr_max_, this->addr_min_);
       m.pri = priTxn;
       m.addr = ADDR_SEARCH_ADDR_H;
       m.msg = (DALIMsg) ((this->addr_mid_ >> 16) & 0xFF);
@@ -367,6 +369,7 @@ void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
         this->addr_min_ = this->addr_mid_ + 1;
         if (this->addr_min_ > this->addr_max_) {
           // We've finished our search, no more lamps
+          ESP_LOGI(TAG, "No more lamps found");
           this->terminate_addressing_(true);
         } else {
           // Ready to search again
@@ -381,6 +384,7 @@ void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
           // We found a lamp! Program its short address.
           // Theoretically, we could be a bit more strict about replies here. It'd be a bit
           // weird if two lamps replied with min==max. But, YOLO. It's probably fine.
+          ESP_LOGI(TAG, "Programming long address %06X with short address %u", this->addr_min_, this->addr_short_);
           m.pri = priTxn;
           m.addr = ADDR_PROGRAM_SHORT_ADDR;
           m.msg = this->addr_short_;
@@ -425,6 +429,7 @@ void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
 
 void DALIBusComponent::terminate_addressing_(bool success) {
   if (this->addr_state_ >= asInitialise) {
+    ESP_LOGI(TAG, "Terminating addressing");
     // We sent initialise, so we should terminate to get back out of config mode
     SendMsg m;
     m.pri = priAuto;
@@ -458,7 +463,7 @@ void DALIBusComponent::process_addr_wait_() {
 void DALIBusComponent::loop() {
   if (this->reset_time_ != 0 && this->reset_time_ < micros()) {
     // We're in scan mode, kick off addressing
-    ESP_LOGD(TAG, "Starting addressing");
+    ESP_LOGI(TAG, "Starting addressing");
     this->reset_time_ = 0;
     this->send_reset(ADDR_BROADCAST, this->addr_cb_);
   }
