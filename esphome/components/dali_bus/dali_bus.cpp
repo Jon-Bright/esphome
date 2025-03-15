@@ -46,6 +46,7 @@ void DALIBusComponent::setup() {
   this->store_.in_pin = this->in_pin_->to_isr();
 
   this->in_pin_->attach_interrupt(DALIInterrupt::gpio_intr, &this->store_, gpio::INTERRUPT_ANY_EDGE);
+  this->setup_timer_();
 
   if (this->scan_) {
     this->addr_state_ = asReset;
