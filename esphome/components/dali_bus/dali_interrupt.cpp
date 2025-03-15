@@ -273,6 +273,7 @@ void DALIInterrupt::begin_send(uint32_t to_send, uint32_t send_bits) {
 
   // Start the start bit
   this->set_dali_low();
+  this->low_time_at_start_of_high = 0;
   this->start_half_bit_timer();
 }
 
