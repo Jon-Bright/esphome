@@ -482,6 +482,10 @@ void DALIBusComponent::send_reset(DALIAddr addr, msg_callback_t cb) {
 }
 
 void DALIBusComponent::send_lamp_off(DALIAddr addr, msg_callback_t cb) {
+  if (this->addr_state_ != asInactive) {
+    return;
+  }
+  ESP_LOGD(TAG, "send_lamp_off addr %02X", addr);
   SendMsg m{
     pri: priUser,
     addr: (DALIAddr) ((addr << 1) | 1),
@@ -492,6 +496,10 @@ void DALIBusComponent::send_lamp_off(DALIAddr addr, msg_callback_t cb) {
 }
 
 void DALIBusComponent::send_dapc(DALIAddr addr, uint8_t level, msg_callback_t cb) {
+  if (this->addr_state_ != asInactive) {
+    return;
+  }
+  ESP_LOGD(TAG, "send_dapc addr %02X, level %02X", addr, level);
   SendMsg m{
     pri: priUser,
     addr: addr,
