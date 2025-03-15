@@ -187,7 +187,7 @@ struct DALIInterrupt {
   volatile uint8_t send_half_bits{0};
   volatile uint32_t send_val{0};
   volatile uint32_t low_time_at_start_of_high{0};
-  volatile DALISendState send_state{ssSuccess};
+  volatile DALISendState send_state{ssNone};
 
   static void gpio_intr(DALIInterrupt *d);
   static void timer_intr(DALIInterrupt *d);
@@ -282,7 +282,7 @@ class DALIBusComponent : public Component {
   bool scan_;
   DALIInterrupt store_;
   struct SendMsg sending_;
-  SendMsgState send_state_;
+  SendMsgState send_state_{smsDone};
   uint32_t back_frame_wait_start_;
   uint32_t reset_time_{0};
   std::deque<struct SendMsg> msg_queue_;
