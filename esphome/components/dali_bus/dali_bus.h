@@ -263,6 +263,8 @@ class DALIBusComponent : public Component {
   void set_dali_in_pin(InternalGPIOPin *in_pin) { in_pin_ = in_pin; }
 
   void send_reset(DALIAddr addr, msg_callback_t cb);
+  void send_lamp_off(DALIAddr addr, msg_callback_t cb);
+  void send_dapc(DALIAddr addr, uint8_t level, msg_callback_t cb);
 
  protected:
   void setup_timer_();

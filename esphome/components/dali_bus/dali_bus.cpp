@@ -468,5 +468,25 @@ void DALIBusComponent::send_reset(DALIAddr addr, msg_callback_t cb) {
   this->wait_then_send_(m);
 }
 
+void DALIBusComponent::send_lamp_off(DALIAddr addr, msg_callback_t cb) {
+  SendMsg m{
+    pri: priUser,
+    addr: (DALIAddr) ((addr << 1) | 1),
+    msg: msgOff,
+    callback: cb,
+  };
+  this->wait_then_send_(m);
+}
+
+void DALIBusComponent::send_dapc(DALIAddr addr, uint8_t level, msg_callback_t cb) {
+  SendMsg m{
+    pri: priUser,
+    addr: addr,
+    msg: (DALIMsg) level,
+    callback: cb,
+  };
+  this->wait_then_send_(m);
+}
+
 }  // namespace dali_bus
 }  // namespace esphome
