@@ -49,11 +49,14 @@ void DALIBusComponent::setup() {
   this->setup_timer_();
 
   if (this->scan_) {
+    ESP_LOGD(TAG, "Beginning scan with reset");
     this->addr_state_ = asReset;
     this->addr_cb_ = std::bind(&DALIBusComponent::addressing_cb_, this, std::placeholders::_1, std::placeholders::_2);
-    this->send_reset(ADDR_BROADCAST, this->addr_cb_);
+    // Wait 5s from now before sending the reset. (Since we're at startup, there should be no clock-wrapping.)
+    this->reset_time_ = micros() + 5 * 1000 * 1000;
   } else {
     this->addr_state_ = asInactive;
+    this->reset_time_ = 0;
   }
 }
 
@@ -445,6 +448,12 @@ void DALIBusComponent::process_addr_wait_() {
 }
 
 void DALIBusComponent::loop() {
+  if (this->reset_time_ != 0 && this->reset_time_ < micros()) {
+    // We're in scan mode, kick off addressing
+    ESP_LOGD(TAG, "Starting addressing");
+    this->reset_time_ = 0;
+    this->send_reset(ADDR_BROADCAST, this->addr_cb_);
+  }
   this->store_.log_any_recv_errors();
   this->process_sent_message_();
   this->process_back_frames_();
