@@ -22,6 +22,13 @@ void IRAM_ATTR HOT DALIInterrupt::gpio_intr(DALIInterrupt *d) {
 }
 
 void IRAM_ATTR HOT DALIInterrupt::timer_intr(DALIInterrupt *d) {
+  if (d->timer_cnt == 0) {
+    return;
+  }
+  d->timer_cnt = d->timer_cnt - 1;
+  if (d->timer_cnt > 0) {
+    return;
+  }
   if (d->recv_state == rsSending) {
     // We're sending. The timer for the prior half-bit expired, we should send the next half-bit (if any).
     d->send_next_half_bit();

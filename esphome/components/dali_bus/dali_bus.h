@@ -173,6 +173,8 @@ struct DALIInterrupt {
 #ifdef USE_ESP32_FRAMEWORK_ARDUINO
   hw_timer_t *timer;
 #endif
+  volatile uint32_t timer_cnt{0};
+
   volatile DALIRecvDebug debug_recv_err;
   volatile uint32_t debug_recv_time;
   volatile DALIRecvState debug_recv_state;
