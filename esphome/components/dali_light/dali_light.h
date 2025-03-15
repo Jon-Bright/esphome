@@ -15,12 +15,15 @@ class DALILight : public Component, public light::LightOutput {
   void setup_state(light::LightState *state) override;
   void write_state(light::LightState *state) override;
 
-  void set_dali_bus(esphome::dali_bus::DALIBusComponent *bus);
+  void set_dali_bus(dali_bus::DALIBusComponent *bus);
   void set_light_id(uint8_t id);
 
  protected:
-  esphome::dali_bus::DALIBusComponent *bus_;
-  uint8_t light_id_;
+  dali_bus::DALIBusComponent *bus_;
+  dali_bus::DALIAddr light_id_;
+  light::LightState *state_{nullptr};
+  uint8_t min_level_{0};
+  uint8_t max_level_{254};
 };
 
 }  // namespace dali_light
