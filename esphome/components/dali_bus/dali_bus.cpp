@@ -468,7 +468,7 @@ void DALIBusComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "dali_bus:");
   LOG_PIN("  DALI out: ", this->out_pin_);
   LOG_PIN("  DALI in: ", this->in_pin_);
-  ESP_LOGCONFIG(TAG, "  Scan: ", YESNO(this->scan_));
+  ESP_LOGCONFIG(TAG, "  Scan: %s", YESNO(this->scan_));
 }
 
 void DALIBusComponent::send_reset(DALIAddr addr, msg_callback_t cb) {
