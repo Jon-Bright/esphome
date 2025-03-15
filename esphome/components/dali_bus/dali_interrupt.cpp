@@ -227,7 +227,7 @@ void IRAM_ATTR HOT DALIInterrupt::send_next_half_bit() {
   if (this->send_state == ssStartBit) {
     // We've just sent the first half of our start bit. Switch to DALI high, move on to data bits.
     set_dali_high();
-    this->low_time_at_start_of_high = micros();
+    this->low_time_at_start_of_high = this->last_dali_low;
     this->send_state = ssDataBits;
     this->start_half_bit_timer();
   } else if (this->send_state == ssDataBits) {
@@ -235,14 +235,14 @@ void IRAM_ATTR HOT DALIInterrupt::send_next_half_bit() {
     if (this->send_half_bits == 0) {
       // ...but there's nothing more to send! Send a stop bit.
       set_dali_high();
-      this->low_time_at_start_of_high = micros();
+      this->low_time_at_start_of_high = this->last_dali_low;
       this->send_state = ssStopBit;
       this->start_stop_bit_timer();
     } else {
       // ...and there's more to send.
       if ((this->send_val & 1) == 1) {
         set_dali_high();
-        this->low_time_at_start_of_high = micros();
+        this->low_time_at_start_of_high = this->last_dali_low;
       } else {
         set_dali_low();
         this->low_time_at_start_of_high = 0;
