@@ -7,6 +7,7 @@ class DALILight : public Component {
  public:
   void setup() override;
   void loop() override;
+  void dump_config() override;
 
   void set_dali_bus(esphome::dali_bus::DALIBusComponent *bus);
   void set_light_id(uint8_t id);
