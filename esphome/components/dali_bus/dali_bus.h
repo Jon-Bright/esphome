@@ -226,6 +226,7 @@ struct SendMsg {
   DALIPri pri;
   DALIAddr addr;
   DALIMsg msg;
+  bool expect_back_frame;
 
   msg_callback_t callback;
 

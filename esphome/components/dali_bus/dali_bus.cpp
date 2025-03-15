@@ -126,7 +126,7 @@ void DALIBusComponent::process_sent_message_() {
       this->sending_.pri = priTxn;
       this->send_state_ = smsAwaitSend2;
       this->msg_queue_.push_front(this->sending_);
-    } else if (this->sending_.msg >= msgQueryStatus && this->sending_.msg <= msgReadMemoryLoc) {
+    } else if (this->sending_.expect_back_frame) {
       // We need to wait for a reply
       this->send_state_ = smsAwaitBackFrame;
       this->back_frame_wait_start_ = micros();
@@ -261,6 +261,7 @@ void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
     return;
   }
   SendMsg m;
+  m.expect_back_frame = false;
   m.callback = this->addr_cb_;
 
   switch (this->addr_state_) {
@@ -340,6 +341,7 @@ void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
       m.pri = priTxn;
       m.addr = ADDR_COMPARE;
       m.msg = (DALIMsg) 0;
+      m.expect_back_frame = true;
       this->addr_state_ = asCompare;
       this->wait_then_send_(m);
       break;
@@ -398,6 +400,7 @@ void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
       m.pri = priTxn;
       m.addr = ADDR_VERIFY_SHORT_ADDR;
       m.msg = this->addr_short_;
+      m.expect_back_frame = true;
       this->addr_state_ = asVerifyShortAddr;
       this->wait_then_send_(m);
 
@@ -427,6 +430,7 @@ void DALIBusComponent::terminate_addressing_(bool success) {
     m.pri = priAuto;
     m.addr = ADDR_TERMINATE;
     m.msg = (DALIMsg) 0;
+    m.expect_back_frame = false;
     // We don't set a callback here - terminate works or it doesn't, we did our best
     this->addr_state_ = asInactive;
     this->wait_then_send_(m);
@@ -491,6 +495,7 @@ void DALIBusComponent::send_lamp_off(DALIAddr addr, msg_callback_t cb) {
     pri: priUser,
     addr: (DALIAddr) ((addr << 1) | 1),
     msg: msgOff,
+    expect_back_frame: false,
     callback: cb,
   };
   this->wait_then_send_(m);
@@ -505,6 +510,7 @@ void DALIBusComponent::send_dapc(DALIAddr addr, uint8_t level, msg_callback_t cb
     pri: priUser,
     addr: addr,
     msg: (DALIMsg) level,
+    expect_back_frame: false,
     callback: cb,
   };
   this->wait_then_send_(m);
