@@ -61,12 +61,12 @@ void DALIBusComponent::setup() {
 }
 
 void DALIBusComponent::wait_then_send_(struct SendMsg m) {
-  uint32_t wait_us = 12000 + 1000 * m.pri;
   uint32_t now = micros();
-  this->send_state_ = smsAwaitSend1;
-  if (this->send_state_ == smsDone && now - this->store_.last_dali_low >= wait_us) {
+  m.wait_us = 12000 + 1000 * m.pri;
+  if (this->send_state_ == smsDone && now - this->store_.last_dali_low >= m.wait_us) {
     // We're not sending and we've already waited long enough, send now
     this->sending_ = m;
+    this->send_state_ = smsAwaitSend1;
     this->send_forward_message_(m.addr, m.msg);
   } else {
     // Queue up for loop to send
@@ -193,6 +193,9 @@ void DALIBusComponent::send_message_if_ready_() {
     // Message is ready to send
     this->msg_queue_.pop_front();
     this->sending_ = front;
+    if (this->send_state_ == smsDone) {
+      this->send_state_ = smsAwaitSend1;
+    }
     this->send_forward_message_(front.addr, front.msg);
     // We don't need to loop through other queued messages - the fact that we just started
     // sending one means by definition that any others can't be ready to send.

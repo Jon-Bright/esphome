@@ -284,6 +284,7 @@ class DALIBusComponent : public Component {
   struct SendMsg sending_;
   SendMsgState send_state_;
   uint32_t back_frame_wait_start_;
+  uint32_t reset_time_{0};
   std::deque<struct SendMsg> msg_queue_;
 
   AddressState addr_state_;
