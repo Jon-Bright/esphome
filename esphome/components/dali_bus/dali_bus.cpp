@@ -110,7 +110,8 @@ void DALIBusComponent::send_forward_message_(DALIAddr addr, DALIMsg msg) {
 
 void DALIBusComponent::process_sent_message_() {
   if (this->store_.send_state == ssFailed) {
-    ESP_LOGD(TAG, "Sending message failed");
+    ESP_LOGD(TAG, "Sending message failed. Was sending addr %02X, msg %02X, ltasoh %08X, ldl %08X", this->sending_.addr,
+             this->sending_.msg, this->store_.low_time_at_start_of_high, this->store_.last_dali_low);
     this->store_.send_state = ssNone;
     if (this->sending_.callback) {
       this->sending_.callback(crSendFailed, 0);
