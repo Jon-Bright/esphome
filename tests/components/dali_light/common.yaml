@@ -3,6 +3,7 @@ dali_bus:
   dali_out_pin: ${dali_out_pin}
   dali_in_pin: ${dali_in_pin}
 
-dali_light:
-  id: dali_light1
-  light_id: 0
+light:
+  - platform: dali_light
+    id: dali_light1
+    light_id: 0
