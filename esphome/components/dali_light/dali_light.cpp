@@ -11,7 +11,7 @@ void DALILight::loop() {}
 
 void DALILight::set_dali_bus(esphome::dali_bus::DALIBusComponent *bus) { this->bus_ = bus; }
 
-void DALILight::set_light_id(int id) { this->light_id_ = id; }
+void DALILight::set_light_id(uint8_t id) { this->light_id_ = id; }
 
 }  // namespace dali_light
 }  // namespace esphome
