@@ -347,7 +347,8 @@ void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
       // Step 12
       // "Failed to send" is dealt with above
       if (cr == crSuccess) {
-        // Shouldn't happen
+        // This shouldn't happen - asCompare should get a good back frame, one of the accepted
+        // errors below or no back frame
         ESP_LOGE(TAG, "crSuccess on asCompare, min %u, max %u, short %u", this->addr_min_, this->addr_max_,
                  this->addr_short_);
         this->terminate_addressing_(false);
