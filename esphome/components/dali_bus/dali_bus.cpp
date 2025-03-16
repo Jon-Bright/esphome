@@ -570,7 +570,7 @@ void DALIBusComponent::send_set_fade_time(DALIAddr addr, msg_callback_t cb) {
   ESP_LOGD(TAG, "send_set_fade_time addr %02X", addr);
   SendMsg m{
     pri: priUser,
-    addr: addr,
+    addr: (DALIAddr) ((addr << 1) | 1),
     msg: msgSetFadeTime,
     expect_back_frame: false,
     send_twice: true,
