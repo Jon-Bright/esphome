@@ -2,6 +2,7 @@
 #include "esphome/core/log.h"
 #include "esphome/components/dali_bus/dali_bus.h"
 #include "dali_light.h"
+#include "dali_transformer.h"
 
 namespace esphome {
 namespace dali_light {
@@ -16,6 +17,10 @@ light::LightTraits DALILight::get_traits() {
   auto traits = light::LightTraits();
   traits.set_supported_color_modes({light::ColorMode::BRIGHTNESS});
   return traits;
+}
+
+std::unique_ptr<light::LightTransformer> DALILight::create_default_transition() {
+  return make_unique<DALITransitionTransformer>(this);
 }
 
 void DALILight::setup_state(light::LightState *state) { this->state_ = state; }

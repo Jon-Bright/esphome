@@ -12,6 +12,7 @@ class DALILight : public Component, public light::LightOutput {
   void dump_config() override;
 
   light::LightTraits get_traits() override;
+  std::unique_ptr<light::LightTransformer> create_default_transition() override;
   void setup_state(light::LightState *state) override;
   void write_state(light::LightState *state) override;
 
