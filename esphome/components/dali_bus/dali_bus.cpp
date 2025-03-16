@@ -391,7 +391,7 @@ void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
           ESP_LOGI(TAG, "Programming long address %06X with short address %u", this->addr_min_, this->addr_short_);
           m.pri = priTxn;
           m.addr = ADDR_PROGRAM_SHORT_ADDR;
-          m.msg = this->addr_short_;
+          m.msg = (DALIMsg) ((this->addr_short_ << 1) | 1);
           this->addr_state_ = asProgramShortAddr;
           this->wait_then_send_(m);
         } else {
@@ -407,7 +407,7 @@ void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
       // Step 14
       m.pri = priTxn;
       m.addr = ADDR_VERIFY_SHORT_ADDR;
-      m.msg = this->addr_short_;
+      m.msg = (DALIMsg) ((this->addr_short_ << 1) | 1);
       m.expect_back_frame = true;
       this->addr_state_ = asVerifyShortAddr;
       this->wait_then_send_(m);
