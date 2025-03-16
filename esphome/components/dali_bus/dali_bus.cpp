@@ -518,7 +518,8 @@ void DALIBusComponent::send_dapc(DALIAddr addr, uint8_t level, msg_callback_t cb
   ESP_LOGD(TAG, "send_dapc addr %02X, level %02X", addr, level);
   SendMsg m{
     pri: priUser,
-    addr: addr,
+    // This is the one time where we _don't_ set the bottom bit - that's how DAPC commands are identified
+    addr: (DALIAddr) (addr << 1),
     msg: (DALIMsg) level,
     expect_back_frame: false,
     send_twice: false,
