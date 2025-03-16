@@ -16,9 +16,9 @@ const DALIAddr ADDR_BROADCAST = (DALIAddr) 0xFF;
 
 const DALIAddr ADDR_TERMINATE = (DALIAddr) 0xa1;
 const DALIAddr ADDR_DTR0 = (DALIAddr) 0xa3;
-const DALIAddr ADDR_INITIALISE = (DALIAddr) 0xa5;
-const DALIAddr ADDR_RANDOMISE = (DALIAddr) 0xa7;
-const DALIAddr ADDR_COMPARE = (DALIAddr) 0xa9;
+const DALIAddr ADDR_INITIALISE = (DALIAddr) 0xa5;  // Send twice
+const DALIAddr ADDR_RANDOMISE = (DALIAddr) 0xa7;   // Send twice
+const DALIAddr ADDR_COMPARE = (DALIAddr) 0xa9;     // Back frame
 const DALIAddr ADDR_WITHDRAW = (DALIAddr) 0xab;
 const DALIAddr ADDR_PING = (DALIAddr) 0xad;
 
@@ -26,13 +26,13 @@ const DALIAddr ADDR_SEARCH_ADDR_H = (DALIAddr) 0xb1;
 const DALIAddr ADDR_SEARCH_ADDR_M = (DALIAddr) 0xb3;
 const DALIAddr ADDR_SEARCH_ADDR_L = (DALIAddr) 0xb5;
 const DALIAddr ADDR_PROGRAM_SHORT_ADDR = (DALIAddr) 0xb7;
-const DALIAddr ADDR_VERIFY_SHORT_ADDR = (DALIAddr) 0xb9;
-const DALIAddr ADDR_QUERY_SHORT_ADDR = (DALIAddr) 0xbb;
+const DALIAddr ADDR_VERIFY_SHORT_ADDR = (DALIAddr) 0xb9;  // Back frame
+const DALIAddr ADDR_QUERY_SHORT_ADDR = (DALIAddr) 0xbb;   // Back frame
 
 const DALIAddr ADDR_ENABLE_DEVICE_TYPE = (DALIAddr) 0xc1;
 const DALIAddr ADDR_DTR1 = (DALIAddr) 0xc3;
 const DALIAddr ADDR_DTR2 = (DALIAddr) 0xc5;
-const DALIAddr ADDR_WRITE_MEM_LOC = (DALIAddr) 0xc7;
+const DALIAddr ADDR_WRITE_MEM_LOC = (DALIAddr) 0xc7;  // Back frame
 const DALIAddr ADDR_WRITE_MEM_LOC_NO_REPLY = (DALIAddr) 0xc7;
 
 void DALIBusComponent::setup() {
@@ -122,8 +122,7 @@ void DALIBusComponent::process_sent_message_() {
     return;
   this->store_.send_state = ssNone;
   if (this->send_state_ == smsAwaitSend1) {
-    if ((this->sending_.msg >= 32 && this->sending_.msg <= 129) || this->sending_.addr == ADDR_INITIALISE ||
-        this->sending_.addr == ADDR_RANDOMISE) {
+    if (this->sending_.send_twice) {
       // This needs sending a second time
       this->sending_.pri = priTxn;
       this->send_state_ = smsAwaitSend2;
@@ -264,6 +263,7 @@ void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
   }
   SendMsg m;
   m.expect_back_frame = false;
+  m.send_twice = false;
   m.callback = this->addr_cb_;
 
   switch (this->addr_state_) {
@@ -282,6 +282,7 @@ void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
       m.pri = priTxn;
       m.addr = ADDR_BROADCAST;
       m.msg = msgOff;
+      m.send_twice = true;
       this->addr_state_ = asLampOff;
       this->wait_then_send_(m);
       break;
@@ -290,6 +291,7 @@ void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
       m.pri = priTxn;
       m.addr = ADDR_INITIALISE;
       m.msg = (DALIMsg) 0;
+      m.send_twice = true;
       this->addr_state_ = asInitialise;
       this->wait_then_send_(m);
       break;
@@ -298,6 +300,7 @@ void DALIBusComponent::addressing_cb_(DALICallbackResult cr, uint8_t reply) {
       m.pri = priTxn;
       m.addr = ADDR_RANDOMISE;
       m.msg = (DALIMsg) 0;
+      m.send_twice = true;
       this->addr_state_ = asRandomise;
       this->wait_then_send_(m);
       break;
@@ -502,6 +505,7 @@ void DALIBusComponent::send_lamp_off(DALIAddr addr, msg_callback_t cb) {
     addr: (DALIAddr) ((addr << 1) | 1),
     msg: msgOff,
     expect_back_frame: false,
+    send_twice: true,
     callback: cb,
   };
   this->wait_then_send_(m);
@@ -517,6 +521,7 @@ void DALIBusComponent::send_dapc(DALIAddr addr, uint8_t level, msg_callback_t cb
     addr: addr,
     msg: (DALIMsg) level,
     expect_back_frame: false,
+    send_twice: false,
     callback: cb,
   };
   this->wait_then_send_(m);

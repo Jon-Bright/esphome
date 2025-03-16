@@ -90,7 +90,7 @@ enum DALIMsg : uint8_t {
 
   msgGoToScene = 0x10,  // ...and up to 0x1f, for different scenes.
 
-  msgReset = 0x20,
+  msgReset = 0x20,  // Send twice - all messages from here to EnableWriteMemory below
   msgStoreActualLevelDtr0,
   msgSavePersistentVars,  // v2
   msgSetOperatingMode,    // v2
@@ -114,9 +114,9 @@ enum DALIMsg : uint8_t {
   msgRemoveFromGroup = 0x70,  // ...and up to 0x7f, for different groups.
 
   msgSetShortAddr = 0x80,
-  msgEnableWriteMemory,
+  msgEnableWriteMemory,  // Send twice - all message from Reset above to here
 
-  msgQueryStatus = 0x90,
+  msgQueryStatus = 0x90,  // Back frame - all messages from here to ReadMemoryLoc below
   msgQueryControlGearPresent,
   msgQueryLampFailure,
   msgQueryLampPowerOn,
@@ -151,7 +151,7 @@ enum DALIMsg : uint8_t {
   msgQueryRandomAddrH,
   msgQueryRandomAddrM,
   msgQueryRandomAddrL,
-  msgReadMemoryLoc,
+  msgReadMemoryLoc,  // Back frame - all messages from here to ReadMemoryLoc below
 
   msgAppExtCmdBase = 0xe0,
 };
@@ -227,6 +227,7 @@ struct SendMsg {
   DALIAddr addr;
   DALIMsg msg;
   bool expect_back_frame;
+  bool send_twice;
 
   msg_callback_t callback;
 
