@@ -544,6 +544,22 @@ void DALIBusComponent::send_dtr0(uint8_t dtr0, msg_callback_t cb) {
   this->wait_then_send_(m);
 }
 
+void DALIBusComponent::send_enable_write_memory(DALIAddr addr, msg_callback_t cb) {
+  if (this->addr_state_ != asInactive) {
+    return;
+  }
+  ESP_LOGD(TAG, "send_enable_write_memory addr %02X", addr);
+  SendMsg m{
+    pri: priUser,
+    addr: (DALIAddr) ((addr << 1) | 1),
+    msg: msgEnableWriteMemory,
+    expect_back_frame: false,
+    send_twice: true,
+    callback: cb,
+  };
+  this->wait_then_send_(m);
+}
+
 void DALIBusComponent::send_set_fade_time(DALIAddr addr, msg_callback_t cb) {
   if (this->addr_state_ != asInactive) {
     return;

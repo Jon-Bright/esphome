@@ -271,6 +271,7 @@ class DALIBusComponent : public Component {
   void send_lamp_off(DALIAddr addr, msg_callback_t cb);
   void send_dapc(DALIAddr addr, uint8_t level, msg_callback_t cb);
   void send_dtr0(uint8_t dtr0, msg_callback_t cb);
+  void send_enable_write_memory(DALIAddr addr, msg_callback_t cb);
   void send_set_fade_time(DALIAddr addr, msg_callback_t cb);
 
  protected:
