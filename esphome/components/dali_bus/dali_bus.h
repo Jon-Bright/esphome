@@ -261,6 +261,7 @@ class DALIBusComponent : public Component {
   void loop() override;
   void dump_config() override;
   float get_setup_priority() const override { return setup_priority::BUS; }
+  bool is_ready() { return this->addr_state_ == asInactive; }
 
   void set_scan(bool scan) { scan_ = scan; }
   void set_dali_out_pin(InternalGPIOPin *out_pin) { out_pin_ = out_pin; }
