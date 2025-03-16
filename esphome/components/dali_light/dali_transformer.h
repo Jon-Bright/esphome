@@ -17,6 +17,10 @@ class DALITransitionTransformer : public light::LightTransformer {
   DALITransitionTransformer(DALILight *light) { this->light_ = light; }
   void start() override;
   optional<light::LightColorValues> apply() override;
+  bool is_finished() override {
+    uint32_t now = esphome::millis();
+    return now >= this->start_time_ + this->length_;
+  }
 
  protected:
   DALILight *light_;
