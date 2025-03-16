@@ -528,6 +528,9 @@ void DALIBusComponent::send_dapc(DALIAddr addr, uint8_t level, msg_callback_t cb
   this->wait_then_send_(m);
 }
 
+// This command is not addressed to a particular light. However, it will only take effect on
+// any lights where memory writing is enabled, which is done by sending "enable write memory" below,
+// which _is_ addressed.
 void DALIBusComponent::send_dtr0(uint8_t dtr0, msg_callback_t cb) {
   if (this->addr_state_ != asInactive) {
     return;
