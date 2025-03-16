@@ -31,6 +31,43 @@ void DALILight::write_state(light::LightState *state) {
   this->bus_->send_dapc(this->light_id_, level, nullptr);
 }
 
+void DALILight::set_fade_time(uint8_t ft, dali_bus::msg_callback_t cb) {
+  if (ft == this->fade_time_) {
+    if (cb) {
+      cb(dali_bus::crSuccess, 0);
+    }
+    return;
+  }
+  this->sending_fade_time_ = ft;
+  this->fade_cb_ = cb;
+  this->bus_->send_dtr0(ft, std::bind(&DALILight::dtr0_fade_cb_, this, std::placeholders::_1, std::placeholders::_2));
+}
+
+void DALILight::dtr0_fade_cb_(dali_bus::DALICallbackResult cr, uint8_t reply) {
+  if (cr != dali_bus::crSuccess) {
+    ESP_LOGE(TAG, "Failed setting DTR0, cr %u", cr);
+    if (this->fade_cb_) {
+      this->fade_cb_(cr, 0);
+    }
+    this->fade_cb_ = nullptr;
+    return;
+  }
+  this->bus_->send_set_fade_time(
+      this->light_id_, std::bind(&DALILight::set_fade_time_cb_, this, std::placeholders::_1, std::placeholders::_2));
+}
+
+void DALILight::set_fade_time_cb_(dali_bus::DALICallbackResult cr, uint8_t reply) {
+  if (cr != dali_bus::crSuccess) {
+    ESP_LOGE(TAG, "Failed setting fade time, cr %u", cr);
+  } else {
+    this->fade_time_ = this->sending_fade_time_;
+  }
+  if (this->fade_cb_) {
+    this->fade_cb_(cr, reply);
+    this->fade_cb_ = nullptr;
+  }
+}
+
 void DALILight::set_dali_bus(dali_bus::DALIBusComponent *bus) { this->bus_ = bus; }
 
 void DALILight::set_light_id(uint8_t id) { this->light_id_ = (dali_bus::DALIAddr) id; }

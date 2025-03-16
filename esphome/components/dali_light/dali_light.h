@@ -18,12 +18,20 @@ class DALILight : public Component, public light::LightOutput {
   void set_dali_bus(dali_bus::DALIBusComponent *bus);
   void set_light_id(uint8_t id);
 
+  void set_fade_time(uint8_t ft, dali_bus::msg_callback_t cb);
+
  protected:
+  void dtr0_fade_cb_(dali_bus::DALICallbackResult cr, uint8_t reply);
+  void set_fade_time_cb_(dali_bus::DALICallbackResult cr, uint8_t reply);
+
   dali_bus::DALIBusComponent *bus_;
   dali_bus::DALIAddr light_id_;
   light::LightState *state_{nullptr};
   uint8_t min_level_{0};
   uint8_t max_level_{254};
+  uint8_t fade_time_{0};
+  uint8_t sending_fade_time_{0};
+  dali_bus::msg_callback_t fade_cb_{nullptr};
 };
 
 }  // namespace dali_light
