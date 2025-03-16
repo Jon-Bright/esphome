@@ -527,5 +527,37 @@ void DALIBusComponent::send_dapc(DALIAddr addr, uint8_t level, msg_callback_t cb
   this->wait_then_send_(m);
 }
 
+void DALIBusComponent::send_dtr0(uint8_t dtr0, msg_callback_t cb) {
+  if (this->addr_state_ != asInactive) {
+    return;
+  }
+  ESP_LOGD(TAG, "send_dtr0 val %02X", dtr0);
+  SendMsg m{
+    pri: priUser,
+    addr: ADDR_DTR0,
+    msg: (DALIMsg) dtr0,
+    expect_back_frame: false,
+    send_twice: false,
+    callback: cb,
+  };
+  this->wait_then_send_(m);
+}
+
+void DALIBusComponent::send_set_fade_time(DALIAddr addr, msg_callback_t cb) {
+  if (this->addr_state_ != asInactive) {
+    return;
+  }
+  ESP_LOGD(TAG, "send_set_fade_time addr %02X", addr);
+  SendMsg m{
+    pri: priUser,
+    addr: addr,
+    msg: msgSetFadeTime,
+    expect_back_frame: false,
+    send_twice: true,
+    callback: cb,
+  };
+  this->wait_then_send_(m);
+}
+
 }  // namespace dali_bus
 }  // namespace esphome
