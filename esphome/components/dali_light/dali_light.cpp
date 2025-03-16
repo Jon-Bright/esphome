@@ -45,7 +45,21 @@ void DALILight::set_fade_time(uint8_t ft, dali_bus::msg_callback_t cb) {
   }
   this->sending_fade_time_ = ft;
   this->fade_cb_ = cb;
-  this->bus_->send_dtr0(ft, std::bind(&DALILight::dtr0_fade_cb_, this, std::placeholders::_1, std::placeholders::_2));
+  this->bus_->send_enable_write_memory(this->light_id_, std::bind(&DALILight::enable_write_memory_fade_cb_, this,
+                                                                  std::placeholders::_1, std::placeholders::_2));
+}
+
+void DALILight::enable_write_memory_fade_cb_(dali_bus::DALICallbackResult cr, uint8_t reply) {
+  if (cr != dali_bus::crSuccess) {
+    ESP_LOGE(TAG, "Failed enabling write memory, cr %u", cr);
+    if (this->fade_cb_) {
+      this->fade_cb_(cr, 0);
+    }
+    this->fade_cb_ = nullptr;
+    return;
+  }
+  this->bus_->send_dtr0(this->sending_fade_time_,
+                        std::bind(&DALILight::dtr0_fade_cb_, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 void DALILight::dtr0_fade_cb_(dali_bus::DALICallbackResult cr, uint8_t reply) {
