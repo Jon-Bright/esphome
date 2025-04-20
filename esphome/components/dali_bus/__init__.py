@@ -9,14 +9,18 @@ dali_ns = cg.esphome_ns.namespace("dali_bus")
 DALIBusComponent = dali_ns.class_("DALIBusComponent", cg.Component)
 
 CONF_DALI_OUT_PIN = "dali_out_pin"
+CONF_DALI_OUT_INVERT = "dali_out_invert"
 CONF_DALI_IN_PIN = "dali_in_pin"
+CONF_DALI_IN_INVERT = "dali_in_invert"
 
 CONFIG_SCHEMA = cv.All(
     cv.Schema(
         {
             cv.GenerateID(): cv.declare_id(DALIBusComponent),
             cv.Required(CONF_DALI_OUT_PIN): pins.internal_gpio_output_pin_schema,
+            cv.Optional(CONF_DALI_OUT_INVERT, default=False): cv.boolean,
             cv.Required(CONF_DALI_IN_PIN): pins.internal_gpio_input_pin_schema,
+            cv.Optional(CONF_DALI_IN_INVERT, default=False): cv.boolean,
             cv.Optional(CONF_SCAN, default=True): cv.boolean,
         }
     ).extend(cv.COMPONENT_SCHEMA),
@@ -30,6 +34,8 @@ async def to_code(config):
 
     dali_out_pin = await cg.gpio_pin_expression(config[CONF_DALI_OUT_PIN])
     cg.add(var.set_dali_out_pin(dali_out_pin))
+    cg.add(var.set_dali_out_invert(config[CONF_DALI_OUT_INVERT]))
     dali_in_pin = await cg.gpio_pin_expression(config[CONF_DALI_IN_PIN])
     cg.add(var.set_dali_in_pin(dali_in_pin))
+    cg.add(var.set_dali_in_invert(config[CONF_DALI_IN_INVERT]))
     cg.add(var.set_scan(config[CONF_SCAN]))

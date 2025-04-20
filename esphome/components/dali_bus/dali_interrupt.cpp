@@ -14,10 +14,10 @@ static const char *const TAG = "dali_bus";
 // Conversely, DALI's "high" state is "no short" and this appears as the pin reading low.
 // We receive an interrupt any time the level changes.
 void IRAM_ATTR HOT DALIInterrupt::gpio_intr(DALIInterrupt *d) {
-  if (d->in_pin.digital_read() == 0) {
-    d->dali_high();
-  } else {
+  if (d->in_pin.digital_read() == d->in_shorted_state) {
     d->dali_low();
+  } else {
+    d->dali_high();
   }
 }
 
@@ -213,9 +213,9 @@ void IRAM_ATTR HOT DALIInterrupt::dali_idle() {
   }
 }
 
-inline void IRAM_ATTR HOT DALIInterrupt::set_dali_high() { this->out_pin.digital_write(false); }
+inline void IRAM_ATTR HOT DALIInterrupt::set_dali_high() { this->out_pin.digital_write(!this->out_shorted_state); }
 
-inline void IRAM_ATTR HOT DALIInterrupt::set_dali_low() { this->out_pin.digital_write(true); }
+inline void IRAM_ATTR HOT DALIInterrupt::set_dali_low() { this->out_pin.digital_write(this->out_shorted_state); }
 
 void IRAM_ATTR HOT DALIInterrupt::send_next_half_bit() {
   // First, check if we collided with another sender on the bus. We can't see collisions if we'd

@@ -170,6 +170,8 @@ enum DALIRecvDebug : uint8_t {
 struct DALIInterrupt {
   ISRInternalGPIOPin in_pin;
   ISRInternalGPIOPin out_pin;
+  bool in_shorted_state;   // The input pin state when the bus is shorted
+  bool out_shorted_state;  // The output pin state when the bus is shorted
 #ifdef USE_ESP32_FRAMEWORK_ARDUINO
   hw_timer_t *timer;
 #endif
@@ -265,7 +267,9 @@ class DALIBusComponent : public Component {
 
   void set_scan(bool scan) { scan_ = scan; }
   void set_dali_out_pin(InternalGPIOPin *out_pin) { out_pin_ = out_pin; }
+  void set_dali_out_invert(bool invert) { out_inverted_ = invert; }
   void set_dali_in_pin(InternalGPIOPin *in_pin) { in_pin_ = in_pin; }
+  void set_dali_in_invert(bool invert) { in_inverted_ = invert; }
 
   void send_reset(DALIAddr addr, msg_callback_t cb);
   void send_lamp_off(DALIAddr addr, msg_callback_t cb);
@@ -286,7 +290,9 @@ class DALIBusComponent : public Component {
   void process_addr_wait_();
 
   InternalGPIOPin *out_pin_;
+  bool out_inverted_;
   InternalGPIOPin *in_pin_;
+  bool in_inverted_;
   bool scan_;
   DALIInterrupt store_;
   struct SendMsg sending_;
