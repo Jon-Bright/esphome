@@ -21,7 +21,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_DALI_OUT_INVERT, default=False): cv.boolean,
             cv.Required(CONF_DALI_IN_PIN): pins.internal_gpio_input_pin_schema,
             cv.Optional(CONF_DALI_IN_INVERT, default=False): cv.boolean,
-            cv.Optional(CONF_SCAN, default=True): cv.boolean,
+            cv.Optional(CONF_SCAN, default=False): cv.boolean,
         }
     ).extend(cv.COMPONENT_SCHEMA),
     cv.only_on([PLATFORM_ESP32, PLATFORM_ESP8266]),
