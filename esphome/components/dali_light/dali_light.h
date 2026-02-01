@@ -22,6 +22,7 @@ class DALILight : public Component, public light::LightOutput {
   void set_fade_time(uint8_t ft, dali_bus::msg_callback_t cb);
 
  protected:
+  void dapc_cb_(dali_bus::DALICallbackResult cr, uint8_t reply);
   void enable_write_memory_fade_cb_(dali_bus::DALICallbackResult cr, uint8_t reply);
   void dtr0_fade_cb_(dali_bus::DALICallbackResult cr, uint8_t reply);
   void set_fade_time_cb_(dali_bus::DALICallbackResult cr, uint8_t reply);

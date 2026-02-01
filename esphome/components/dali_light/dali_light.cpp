@@ -38,8 +38,11 @@ void DALILight::write_state(light::LightState *state) {
     this->bus_->send_lamp_off(this->light_id_, nullptr);
     return;
   }
+  ESP_LOGD(TAG, "Brightness %.2f, max %u, min %u, max-min %u", brightness, this->max_level_, this->min_level_,
+           this->max_level_ - this->min_level_);
   uint8_t level = (this->max_level_ - this->min_level_) * brightness + this->min_level_;
-  this->bus_->send_dapc(this->light_id_, level, nullptr);
+  this->bus_->send_dapc(this->light_id_, level,
+                        std::bind(&DALILight::dapc_cb_, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 void DALILight::set_fade_time(uint8_t ft, dali_bus::msg_callback_t cb) {
@@ -53,6 +56,15 @@ void DALILight::set_fade_time(uint8_t ft, dali_bus::msg_callback_t cb) {
   this->fade_cb_ = cb;
   this->bus_->send_enable_write_memory(this->light_id_, std::bind(&DALILight::enable_write_memory_fade_cb_, this,
                                                                   std::placeholders::_1, std::placeholders::_2));
+}
+
+void DALILight::dapc_cb_(dali_bus::DALICallbackResult cr, uint8_t reply) {
+  if (cr != dali_bus::crSuccess) {
+    ESP_LOGE(TAG, "Light %u: failed DAPC, cr %u", this->light_id_, cr);
+    return;
+  } else {
+    ESP_LOGD(TAG, "Light %u: DAPC ok", this->light_id_);
+  }
 }
 
 void DALILight::enable_write_memory_fade_cb_(dali_bus::DALICallbackResult cr, uint8_t reply) {
