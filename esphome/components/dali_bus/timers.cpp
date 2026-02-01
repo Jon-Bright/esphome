@@ -30,9 +30,21 @@ static const uint32_t GCF_TICKS = 10;
 
 #if defined(ESP8266)
 
+DALIInterrupt *DALIInterrupt::instance;
+void IRAM_ATTR HOT DALIInterrupt::timer_intr_void() { DALIInterrupt::timer_intr(DALIInterrupt::instance); }
+
 void DALIBusComponent::setup_timer_() {
-  static DALIInterrupt *arg = &this->store_;
-  timer1_attachInterrupt([] { DALIInterrupt::timer_intr(arg); });
+  InterruptLock lock;
+  // Ideally, we'd use this lambda-based version to avoid having a static
+  // variable. The problem with doing this is that we can't mark the lambda
+  // as IRAM_ATTR, which ESP8266 really needs (as in, for me, as soon as WiFi
+  // starts, it crashes if it's not IRAM_ATTR). As such, we use the version
+  // with an instance variable and a static function, which we can mark
+  // appropriately.
+  // static DALIInterrupt *arg = &this->store_;
+  // timer1_attachInterrupt([] { DALIInterrupt::timer_intr(arg); });
+  DALIInterrupt::instance = &this->store_;
+  timer1_attachInterrupt(DALIInterrupt::timer_intr_void);
   timer1_enable(TIM_DIV256, TIM_EDGE, TIM_LOOP);
   timer1_write(GCF_TICKS);
 }
@@ -40,6 +52,7 @@ void DALIBusComponent::setup_timer_() {
 #elif defined(USE_ESP32_FRAMEWORK_ARDUINO)
 
 void DALIBusComponent::setup_timer_() {
+  InterruptLock lock;
   // When ESPhome starts using IDF 5.1 and we specify a frequency rather than a
   // divider, frequency 312500 is correct here
   this->store_.timer = timerBegin(0, 256, true);
@@ -55,6 +68,7 @@ void DALIBusComponent::setup_timer_() {
 #elif defined(USE_ESP_IDF)
 
 void DALIBusComponent::setup_timer_() {
+  InterruptLock lock;
   timer_config_t config = {
       .alarm_en = TIMER_ALARM_DIS,
       .counter_en = TIMER_PAUSE,

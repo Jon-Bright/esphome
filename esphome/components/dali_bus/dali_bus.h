@@ -198,6 +198,10 @@ struct DALIInterrupt {
 #ifdef USE_ESP_IDF
   static bool timer_intr_bool(void *d);
 #endif
+#ifdef ESP8266
+  static DALIInterrupt *instance;
+  static void timer_intr_void();
+#endif
   void received_bit(bool bit);
   void dali_high();
   void dali_low();
