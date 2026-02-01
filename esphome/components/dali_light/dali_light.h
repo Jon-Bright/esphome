@@ -25,6 +25,8 @@ class DALILight : public Component, public light::LightOutput {
   void enable_write_memory_fade_cb_(dali_bus::DALICallbackResult cr, uint8_t reply);
   void dtr0_fade_cb_(dali_bus::DALICallbackResult cr, uint8_t reply);
   void set_fade_time_cb_(dali_bus::DALICallbackResult cr, uint8_t reply);
+  void query_max_level_cb_(dali_bus::DALICallbackResult cr, uint8_t reply);
+  void query_min_level_cb_(dali_bus::DALICallbackResult cr, uint8_t reply);
 
   dali_bus::DALIBusComponent *bus_;
   dali_bus::DALIAddr light_id_;
@@ -34,6 +36,8 @@ class DALILight : public Component, public light::LightOutput {
   uint8_t fade_time_{0};
   uint8_t sending_fade_time_{0};
   dali_bus::msg_callback_t fade_cb_{nullptr};
+  bool levels_query_started_{false};
+  bool levels_query_done_{false};
 };
 
 }  // namespace dali_light

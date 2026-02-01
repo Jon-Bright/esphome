@@ -581,5 +581,37 @@ void DALIBusComponent::send_set_fade_time(DALIAddr addr, msg_callback_t cb) {
   this->wait_then_send_(m);
 }
 
+void DALIBusComponent::send_query_max_level(DALIAddr addr, msg_callback_t cb) {
+  if (this->addr_state_ != asInactive) {
+    return;
+  }
+  ESP_LOGD(TAG, "send_query_max_level addr %02X", addr);
+  SendMsg m{
+    pri: priUser,
+    addr: (DALIAddr) ((addr << 1) | 1),
+    msg: msgQueryMaxLevel,
+    expect_back_frame: true,
+    send_twice: false,
+    callback: cb,
+  };
+  this->wait_then_send_(m);
+}
+
+void DALIBusComponent::send_query_min_level(DALIAddr addr, msg_callback_t cb) {
+  if (this->addr_state_ != asInactive) {
+    return;
+  }
+  ESP_LOGD(TAG, "send_query_min_level addr %02X", addr);
+  SendMsg m{
+    pri: priUser,
+    addr: (DALIAddr) ((addr << 1) | 1),
+    msg: msgQueryMinLevel,
+    expect_back_frame: true,
+    send_twice: false,
+    callback: cb,
+  };
+  this->wait_then_send_(m);
+}
+
 }  // namespace dali_bus
 }  // namespace esphome

@@ -11,7 +11,13 @@ static const char *const TAG = "dali_light";
 
 void DALILight::setup() {}
 
-void DALILight::loop() {}
+void DALILight::loop() {
+  if (!this->levels_query_started_ && this->bus_ != nullptr && this->bus_->is_ready()) {
+    this->levels_query_started_ = true;
+    this->bus_->send_query_max_level(this->light_id_, std::bind(&DALILight::query_max_level_cb_, this,
+                                                                std::placeholders::_1, std::placeholders::_2));
+  }
+}
 
 light::LightTraits DALILight::get_traits() {
   auto traits = light::LightTraits();
@@ -84,6 +90,26 @@ void DALILight::set_fade_time_cb_(dali_bus::DALICallbackResult cr, uint8_t reply
   if (this->fade_cb_) {
     this->fade_cb_(cr, reply);
     this->fade_cb_ = nullptr;
+  }
+}
+
+void DALILight::query_max_level_cb_(dali_bus::DALICallbackResult cr, uint8_t reply) {
+  if (cr != dali_bus::crGoodBackFrame) {
+    ESP_LOGE(TAG, "Failed querying max level, cr %u", cr);
+  } else {
+    this->max_level_ = reply;
+    this->bus_->send_query_min_level(this->light_id_, std::bind(&DALILight::query_min_level_cb_, this,
+                                                                std::placeholders::_1, std::placeholders::_2));
+  }
+}
+
+void DALILight::query_min_level_cb_(dali_bus::DALICallbackResult cr, uint8_t reply) {
+  if (cr != dali_bus::crGoodBackFrame) {
+    ESP_LOGE(TAG, "Failed querying min level, cr %u", cr);
+  } else {
+    this->min_level_ = reply;
+    ESP_LOGD(TAG, "Light %d, queried levels, min %d, max %d", this->light_id_, this->min_level_, this->max_level_);
+    this->levels_query_done_ = true;
   }
 }
 
