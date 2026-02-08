@@ -1,6 +1,6 @@
 #include "esphome/core/helpers.h"
 #ifdef USE_ESP_IDF
-#include "driver/timer.h"
+#include "driver/gptimer.h"
 #endif
 
 #include "dali_bus.h"
@@ -21,7 +21,7 @@ static const uint32_t HALF_BIT_TICKS = 130;
 // trigger alarms at just the times we want them. ESP32's timer functions,
 // however, don't allow us to touch timer functions while we're in a timer
 // interrupt. This would prevent us from triggering a new half-bit timer in
-// response to a new half-bit timer.  We therefore trigger a timer every
+// response to a half-bit timer interrupt.  We therefore trigger a timer every
 // 10*3.2us=32us, whether we need it or not, which counts down a counter. If
 // the counter reaches zero, we do stuff. This works because 10 divides evenly
 // into both numbers above. If those numbers are changed, this greatest
@@ -69,24 +69,32 @@ void DALIBusComponent::setup_timer_() {
 
 void DALIBusComponent::setup_timer_() {
   InterruptLock lock;
-  timer_config_t config = {
-      .alarm_en = TIMER_ALARM_DIS,
-      .counter_en = TIMER_PAUSE,
-      .intr_type = TIMER_INTR_LEVEL,
-      .counter_dir = TIMER_COUNT_UP,
-      .auto_reload = TIMER_AUTORELOAD_EN,
-      .divider = 256,
+  gptimer_config_t config = {
+      .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+      .direction = GPTIMER_COUNT_UP,
+      .resolution_hz = 312500,
   };
-  timer_init(TIMER_GROUP_0, TIMER_0, &config);
-  timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0);
-  timer_isr_callback_add(TIMER_GROUP_0, TIMER_0, DALIInterrupt::timer_intr_bool, &this->store_, 0);
-  timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0);
-  timer_set_alarm_value(TIMER_GROUP_0, TIMER_0, GCF_TICKS);
-  timer_set_alarm(TIMER_GROUP_0, TIMER_0, TIMER_ALARM_EN);
-  timer_start(TIMER_GROUP_0, TIMER_0);
+  gptimer_handle_t timer;
+  gptimer_new_timer(&config, &timer);
+
+  gptimer_event_callbacks_t callback = {
+      .on_alarm = DALIInterrupt::timer_intr_bool,
+  };
+  gptimer_register_event_callbacks(timer, &callback, &this->store_);
+
+  gptimer_alarm_config_t alarm = {
+      .alarm_count = GCF_TICKS,
+      .flags =
+          {
+              .auto_reload_on_alarm = true,
+          },
+  };
+  gptimer_set_alarm_action(timer, &alarm);
+  gptimer_enable(timer);
+  gptimer_start(timer);
 }
 
-bool IRAM_ATTR HOT DALIInterrupt::timer_intr_bool(void *d) {
+bool IRAM_ATTR HOT DALIInterrupt::timer_intr_bool(gptimer_t *timer, const gptimer_alarm_event_data_t *ad, void *d) {
   timer_intr((DALIInterrupt *) d);
   return false;
 }

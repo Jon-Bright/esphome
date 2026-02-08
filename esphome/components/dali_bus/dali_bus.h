@@ -8,6 +8,10 @@
 #include <esp32-hal-timer.h>
 #endif
 
+#ifdef USE_ESP_IDF
+#include "driver/gptimer.h"
+#endif
+
 namespace esphome {
 namespace dali_bus {
 
@@ -196,7 +200,7 @@ struct DALIInterrupt {
   static void gpio_intr(DALIInterrupt *d);
   static void timer_intr(DALIInterrupt *d);
 #ifdef USE_ESP_IDF
-  static bool timer_intr_bool(void *d);
+  static bool IRAM_ATTR HOT timer_intr_bool(gptimer_t *timer, const gptimer_alarm_event_data_t *ad, void *d);
 #endif
 #ifdef ESP8266
   static DALIInterrupt *instance;
