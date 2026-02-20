@@ -274,6 +274,7 @@ class DALIBusComponent : public Component {
   bool is_ready() { return this->addr_state_ == asInactive; }
 
   void set_scan(bool scan) { scan_ = scan; }
+  void set_dali_scan_delay(int scan_delay) { scan_delay_ = scan_delay; }
   void set_dali_out_pin(InternalGPIOPin *out_pin) { out_pin_ = out_pin; }
   void set_dali_out_invert(bool invert) { out_inverted_ = invert; }
   void set_dali_in_pin(InternalGPIOPin *in_pin) { in_pin_ = in_pin; }
@@ -304,6 +305,7 @@ class DALIBusComponent : public Component {
   InternalGPIOPin *in_pin_;
   bool in_inverted_;
   bool scan_;
+  int scan_delay_;
   DALIInterrupt store_;
   struct SendMsg sending_;
   SendMsgState send_state_{smsDone};

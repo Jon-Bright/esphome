@@ -55,7 +55,7 @@ void DALIBusComponent::setup() {
     this->addr_state_ = asReset;
     this->addr_cb_ = std::bind(&DALIBusComponent::addressing_cb_, this, std::placeholders::_1, std::placeholders::_2);
     // Wait 5s from now before sending the reset. (Since we're at startup, there should be no clock-wrapping.)
-    this->reset_time_ = micros() + 5 * 1000 * 1000;
+    this->reset_time_ = micros() + this->scan_delay_ * 1000 * 1000;
   } else {
     this->addr_state_ = asInactive;
     this->reset_time_ = 0;

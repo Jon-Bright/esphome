@@ -12,6 +12,7 @@ CONF_DALI_OUT_PIN = "dali_out_pin"
 CONF_DALI_OUT_INVERT = "dali_out_invert"
 CONF_DALI_IN_PIN = "dali_in_pin"
 CONF_DALI_IN_INVERT = "dali_in_invert"
+CONF_DALI_SCAN_DELAY = "dali_scan_delay"
 
 CONFIG_SCHEMA = cv.All(
     cv.Schema(
@@ -22,6 +23,9 @@ CONFIG_SCHEMA = cv.All(
             cv.Required(CONF_DALI_IN_PIN): pins.internal_gpio_input_pin_schema,
             cv.Optional(CONF_DALI_IN_INVERT, default=False): cv.boolean,
             cv.Optional(CONF_SCAN, default=False): cv.boolean,
+            cv.Optional(
+                CONF_DALI_SCAN_DELAY, default="5s"
+            ): cv.positive_time_period_seconds,
         }
     ).extend(cv.COMPONENT_SCHEMA),
     cv.only_on([PLATFORM_ESP32, PLATFORM_ESP8266]),
@@ -39,3 +43,4 @@ async def to_code(config):
     cg.add(var.set_dali_in_pin(dali_in_pin))
     cg.add(var.set_dali_in_invert(config[CONF_DALI_IN_INVERT]))
     cg.add(var.set_scan(config[CONF_SCAN]))
+    cg.add(var.set_dali_scan_delay(config[CONF_DALI_SCAN_DELAY]))
